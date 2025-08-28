@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Digital Life Planner Dashboard
 
-## Getting Started
+地域で活動するデジタルライフプランナー（DLP）向けの情報ハブダッシュボードです。
 
-First, run the development server:
+## 機能
+
+- 📰 **本日のトピック**: RSS自動取得、AI要約付き
+- 💰 **補助金・助成金**: 地域別の補助金情報
+- 📱 **地域アプリ**: 地域で活用できるアプリ情報
+- 📝 **地域ニュース**: 地域のデジタル化関連ニュース
+- 🎓 **アカデミックサークル**: DLP関連イベント情報
+- 📖 **地域媒体ナレッジ**: 資料・マニュアル・ガイドブック
+- 📂 **ニュースアーカイブ**: 過去30日間の統合表示
+
+## 技術スタック
+
+- **フロントエンド**: Next.js 14 (App Router), TypeScript, Tailwind CSS
+- **バックエンド**: Supabase (Database, Storage, Edge Functions, Cron)
+- **状態管理**: React Hooks + Context API
+- **AI要約**: OpenAI API (Edge Functions経由)
+
+## セットアップ
+
+### 1. 依存関係のインストール
+
+```bash
+npm install
+```
+
+### 2. 環境変数の設定
+
+`.env.local`ファイルを作成し、以下の環境変数を設定してください：
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+```
+
+### 3. Supabaseの設定
+
+Supabaseプロジェクトを作成し、以下の設定を行ってください：
+
+1. データベーステーブルの作成
+2. Edge Functionsのデプロイ
+3. 環境変数の設定
+
+### 4. 開発サーバーの起動
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 利用可能なスクリプト
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `npm run dev` - 開発サーバー起動
+- `npm run build` - プロダクションビルド
+- `npm run start` - プロダクションサーバー起動
+- `npm run lint` - ESLint実行
+- `npm run type-check` - TypeScript型チェック
+- `npm run supabase:start` - Supabaseローカル起動
+- `npm run db:push` - データベーススキーマ適用
+- `npm run functions:deploy` - Edge Functionsデプロイ
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## プロジェクト構造
 
-## Learn More
+```
+/
+├── app/                    # Next.js App Router
+│   ├── page.tsx           # ダッシュボード
+│   ├── search/            # 共通検索画面
+│   ├── admin/             # 管理画面
+│   ├── archive/           # ニュースアーカイブ
+│   ├── events/            # イベント一覧
+│   └── knowledge/         # ナレッジ一覧
+├── components/            # UIコンポーネント
+├── lib/                  # ユーティリティ
+└── supabase/            # Supabase関連
+    ├── migrations/      # DBマイグレーション
+    └── functions/       # Edge Functions
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 開発ガイド
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 新しいページの追加
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. `app/`ディレクトリに新しいページファイルを作成
+2. 必要に応じてコンポーネントを作成
+3. 型定義を`lib/types.ts`に追加
 
-## Deploy on Vercel
+### データベースの変更
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. `supabase/migrations/`に新しいマイグレーションファイルを作成
+2. `npm run db:push`でスキーマを適用
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Edge Functionsの変更
+
+1. `supabase/functions/`内の関数を編集
+2. `npm run functions:deploy`でデプロイ
+
+## ライセンス
+
+MIT License
+
+## 貢献
+
+プルリクエストやイシューの報告を歓迎します。
