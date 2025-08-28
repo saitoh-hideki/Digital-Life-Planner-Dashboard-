@@ -1,3 +1,5 @@
+import { Tag, Calendar, MapPin, Building } from 'lucide-react'
+
 interface InfoItemProps {
   title: string
   description?: string
@@ -7,30 +9,41 @@ interface InfoItemProps {
 
 export default function InfoItem({ title, description, metadata, badge }: InfoItemProps) {
   return (
-    <div className="border-b border-gray-100 last:border-0 pb-3 last:pb-0">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-gray-900 line-clamp-1 mb-1">
-            {title}
-          </h3>
-          {description && (
-            <p className="text-sm text-gray-600 line-clamp-2 mb-1">
-              {description}
-            </p>
-          )}
-          {metadata && metadata.length > 0 && (
-            <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
-              {metadata.map((item, index) => (
-                <span key={index}>{item}</span>
-              ))}
-            </div>
+    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-slate-200 transition-all duration-200">
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-slate-900 line-clamp-1 text-sm leading-relaxed mb-2">
+              {title}
+            </h3>
+            
+            {description && (
+              <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed mb-3">
+                {description}
+              </p>
+            )}
+            
+            {metadata && metadata.length > 0 && (
+              <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
+                {metadata.map((item, index) => (
+                  <div key={index} className="flex items-center gap-1">
+                    {index === 0 && item.includes('締切') && <Calendar className="w-3 h-3" />}
+                    {index === 0 && item.includes('プラットフォーム') && <Building className="w-3 h-3" />}
+                    {index === 0 && item.includes('都道府県') && <MapPin className="w-3 h-3" />}
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          {badge && (
+            <span className="badge-secondary">
+              <Tag className="w-3 h-3 mr-1" />
+              {badge}
+            </span>
           )}
         </div>
-        {badge && (
-          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 shrink-0">
-            {badge}
-          </span>
-        )}
       </div>
     </div>
   )

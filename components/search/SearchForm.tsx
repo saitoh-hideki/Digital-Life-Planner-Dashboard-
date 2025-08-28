@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, RotateCcw } from 'lucide-react'
-import { prefectures } from '@/lib/prefectures'
+import { prefectures, municipalities, defaultMunicipalities } from '@/lib/prefectures'
 
 interface SearchFormProps {
   onSearch: (params: {
@@ -16,6 +16,18 @@ export default function SearchForm({ onSearch }: SearchFormProps) {
   const [prefecture, setPrefecture] = useState('')
   const [municipality, setMunicipality] = useState('')
   const [keyword, setKeyword] = useState('')
+  const [availableMunicipalities, setAvailableMunicipalities] = useState(defaultMunicipalities)
+
+  // 都道府県が変更されたときに市町村をリセット
+  useEffect(() => {
+    if (prefecture) {
+      const municipalitiesList = municipalities[prefecture as keyof typeof municipalities] || []
+      setAvailableMunicipalities(municipalitiesList)
+    } else {
+      setAvailableMunicipalities(defaultMunicipalities)
+    }
+    setMunicipality('')
+  }, [prefecture])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,6 +38,7 @@ export default function SearchForm({ onSearch }: SearchFormProps) {
     setPrefecture('')
     setMunicipality('')
     setKeyword('')
+    setAvailableMunicipalities(defaultMunicipalities)
     onSearch({ prefecture: '', municipality: '', keyword: '' })
   }
 
@@ -56,14 +69,19 @@ export default function SearchForm({ onSearch }: SearchFormProps) {
             <label htmlFor="municipality" className="block text-sm font-medium text-gray-700 mb-1">
               市区町村
             </label>
-            <input
-              type="text"
+            <select
               id="municipality"
               value={municipality}
               onChange={(e) => setMunicipality(e.target.value)}
-              placeholder="例: 渋谷区"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+              disabled={!prefecture}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            >
+              {availableMunicipalities.map(muni => (
+                <option key={muni.value} value={muni.value}>
+                  {muni.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>

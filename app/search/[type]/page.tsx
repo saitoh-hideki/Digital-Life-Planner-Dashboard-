@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -16,6 +16,50 @@ export default function SearchPage() {
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
+
+  // ページ読み込み時に初期検索を実行
+  useEffect(() => {
+    performInitialSearch()
+  }, [searchType])
+
+  const performInitialSearch = async () => {
+    setLoading(true)
+    try {
+      let query = supabase
+        .from(getTableName())
+        .select('*')
+      
+      if (searchType === 'news') {
+        query = query.eq('status', 'published')
+      }
+      
+      const { data, error } = await query
+        .order(getOrderBy(), { ascending: searchType === 'subsidies' })
+        .limit(20)
+      
+      if (error) throw error
+      
+      // Format results for display
+      const formattedResults: SearchResult[] = (data || []).map(item => ({
+        ...item,
+        metadata: {
+          platform: item.platform,
+          provider: item.provider,
+          apply_end: item.apply_end,
+          audience: item.audience,
+          status: item.status
+        }
+      }))
+      
+      setResults(formattedResults)
+      setHasSearched(true)
+    } catch (error) {
+      console.error('Initial search error:', error)
+      setResults([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getPageTitle = () => {
     switch (searchType) {

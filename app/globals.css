@@ -5,12 +5,69 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --accent: #0ea5e9;
+  --muted: #f8fafc;
+  --muted-foreground: #64748b;
+  --border: #e2e8f0;
+  --ring: #3b82f6;
 }
 
 body {
-  background: var(--background);
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
   color: var(--foreground);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+}
+
+/* カスタムカードスタイル */
+.card-modern {
+  @apply bg-white rounded-2xl shadow-sm border border-slate-100;
+  transition: all 0.2s ease-in-out;
+}
+
+.card-modern:hover {
+  @apply shadow-lg border-slate-200;
+  transform: translateY(-1px);
+}
+
+/* カスタムボタンスタイル */
+.btn-primary {
+  @apply inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all duration-200 hover:shadow-md;
+}
+
+.btn-outline {
+  @apply inline-flex items-center gap-2 px-4 py-2 border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-all duration-200;
+}
+
+/* バッジスタイル */
+.badge-primary {
+  @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800;
+}
+
+.badge-secondary {
+  @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700;
+}
+
+.badge-accent {
+  @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800;
+}
+
+/* アニメーション */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
 }
 
 .line-clamp-1 {

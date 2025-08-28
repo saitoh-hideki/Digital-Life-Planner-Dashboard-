@@ -2,7 +2,7 @@
 
 import { ReactNode } from 'react'
 import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Search } from 'lucide-react'
 
 interface DashboardCardProps {
   title: string
@@ -22,23 +22,34 @@ export default function DashboardCard({
   fullWidth = false
 }: DashboardCardProps) {
   return (
-    <div className={`bg-white rounded-lg shadow-md p-6 ${fullWidth ? 'col-span-full' : ''}`}>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">{icon}</span>
-          <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
+    <div className={`card-modern p-6 ${fullWidth ? 'col-span-full' : ''}`}>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 bg-slate-50 rounded-xl text-xl">
+            {icon}
+          </div>
+          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
         </div>
         {linkText && linkHref && (
           <Link
             href={linkHref}
-            className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors text-sm"
+            className="btn-outline text-xs py-1.5 px-3"
           >
-            {linkText}
-            <ArrowRight className="w-4 h-4" />
+            {linkText.includes('検索') ? (
+              <>
+                <Search className="w-3 h-3" />
+                {linkText}
+              </>
+            ) : (
+              <>
+                {linkText}
+                <ArrowRight className="w-3 h-3" />
+              </>
+            )}
           </Link>
         )}
       </div>
-      <div className="space-y-3">{children}</div>
+      <div className="space-y-4">{children}</div>
     </div>
   )
 }
