@@ -21,7 +21,7 @@ serve(async (req) => {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
     const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
-    const NEWS_FEED_URLS = Deno.env.get('NEWS_FEED_URLS') || 'https://news.google.com/rss'
+    const NEWS_FEED_URLS = Deno.env.get('NEWS_FEED_URLS') || 'https://newsonjapan.com/rss/top.xml'
 
     if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
       throw new Error('Missing required environment variables')
@@ -105,14 +105,14 @@ serve(async (req) => {
                 messages: [
                   {
                     role: 'system',
-                    content: '以下のニュースを2-3行で要約してください。デジタルライフプランナーの視点で重要なポイントを含めてください。'
+                    content: 'あなたは生活者に寄り添うデジタルライフプランナーです。英語のニュースを日本語で以下の形式で回答してください：\n\n【要約】\nニュースの内容を2-3行で正確に日本語で要約\n\n【DLP学習ポイント】\n生活者支援のために知っておくべきポイントを1-2行で日本語で'
                   },
                   {
                     role: 'user',
                     content: `タイトル: ${item.title}\n内容: ${item.description}`
                   }
                 ],
-                max_tokens: 150,
+                max_tokens: 400,
                 temperature: 0.7
               })
             })
