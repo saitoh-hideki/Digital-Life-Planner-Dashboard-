@@ -172,14 +172,14 @@ export default function EventsPage() {
       {/* イベント一覧 */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {events.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[70vh] overflow-y-auto pr-2">
             {events.map((event) => (
               <div
                 key={event.id}
-                className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+                className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col h-full min-h-[400px] max-h-[500px]"
               >
                 {/* ヘッダー */}
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between mb-4 flex-shrink-0">
                   <div className="flex items-center gap-2">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDayOfWeekColor(event.day_of_week)}`}>
                       {event.day_of_week}
@@ -188,36 +188,33 @@ export default function EventsPage() {
                       {event.delivery_type}
                     </span>
                   </div>
-                  <span className="text-xs text-slate-500">
-                    {format(new Date(event.created_at), 'yyyy/MM/dd')}
-                  </span>
                 </div>
 
                 {/* イベント名 */}
-                <h3 className="font-semibold text-slate-900 text-lg mb-2 line-clamp-2">
+                <h3 className="font-semibold text-slate-900 text-lg mb-2 line-clamp-3 flex-shrink-0">
                   {event.event_name}
                 </h3>
 
                 {/* カテゴリ */}
-                <p className="text-slate-600 text-sm mb-4">
+                <p className="text-slate-600 text-sm mb-4 flex-shrink-0">
                   {event.event_category}
                 </p>
 
                 {/* 日時・場所 */}
-                <div className="space-y-2 mb-4">
+                <div className="space-y-2 mb-4 flex-shrink-0">
                   <div className="flex items-center gap-2 text-sm text-slate-600">
                     <Calendar className="w-4 h-4" />
                     <span>{event.event_date}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-slate-600">
                     <Clock className="w-4 h-4" />
-                    <span>{event.start_time} - {event.end_time}</span>
+                    <span>{event.start_time.substring(0, 5)} - {event.end_time.substring(0, 5)}</span>
                   </div>
                 </div>
 
                 {/* アクションボタン */}
-                <div className="flex gap-2">
-                  <button className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-300">
+                <div className="mt-auto flex-shrink-0">
+                  <button className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-300">
                     詳細を見る
                   </button>
                 </div>

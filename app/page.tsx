@@ -301,13 +301,13 @@ export default function DashboardPage() {
           >
             {events.length > 0 ? (
               <div className="space-y-4">
-                {events.map((event) => (
+                {events.slice(0, 3).map((event) => (
                   <InfoItem
                     key={event.id}
                     title={event.event_name}
                     description={event.event_category}
                     metadata={[
-                      `${event.event_date} ${event.start_time}-${event.end_time}`,
+                      `${event.event_date} ${event.start_time.substring(0, 5)}-${event.end_time.substring(0, 5)}`,
                       event.delivery_type
                     ]}
                     badge={event.day_of_week}
