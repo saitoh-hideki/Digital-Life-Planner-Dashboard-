@@ -73,9 +73,10 @@ export default function DashboardPage() {
       const { data: eventsData, error: eventsError } = await supabase
         .from('academic_circle_events')
         .select('*')
-        .gte('start_at', new Date().toISOString())
-        .order('start_at', { ascending: true })
-        .limit(3)
+        .gte('event_date', new Date().toISOString().split('T')[0])
+        .order('event_date', { ascending: true })
+        .order('start_time', { ascending: true })
+        .limit(5)
       
       if (eventsError) throw eventsError
       
@@ -303,12 +304,13 @@ export default function DashboardPage() {
                 {events.map((event) => (
                   <InfoItem
                     key={event.id}
-                    title={event.title}
-                    description={event.venue}
+                    title={event.event_name}
+                    description={event.event_category}
                     metadata={[
-                      format(new Date(event.start_at), 'MM/dd HH:mm', { locale: ja })
+                      `${event.event_date} ${event.start_time}-${event.end_time}`,
+                      event.delivery_type
                     ]}
-                    badge="イベント"
+                    badge={event.day_of_week}
                     badgeColor="green"
                   />
                 ))}
@@ -320,6 +322,12 @@ export default function DashboardPage() {
                 </div>
                 <p className="text-slate-500 text-lg mb-2">イベント情報はまだありません</p>
                 <p className="text-slate-400 text-sm">新しいイベントが登録されると、ここに表示されます</p>
+                <Link
+                  href="/admin/events"
+                  className="inline-flex items-center gap-2 px-4 py-2 mt-3 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                >
+                  イベントを追加
+                </Link>
               </div>
             )}
           </DashboardCard>

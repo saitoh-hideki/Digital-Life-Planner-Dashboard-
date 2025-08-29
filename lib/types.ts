@@ -60,15 +60,16 @@ export interface LocalNews {
 }
 
 export interface AcademicCircleEvent {
-  id?: number
-  region_id?: number
-  title: string
-  description?: string
-  venue?: string
-  start_at: string
-  end_at?: string
-  rsvp_url?: string
-  regions?: Region
+  id: string
+  event_date: string
+  day_of_week: string
+  start_time: string
+  end_time: string
+  event_category: string
+  event_name: string
+  delivery_type: string
+  created_at: string
+  updated_at: string
 }
 
 export interface LocalMediaKnowledge {

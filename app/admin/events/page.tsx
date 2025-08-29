@@ -3,28 +3,32 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { AcademicCircleEvent } from '@/lib/types'
-import { GraduationCap, Plus, Edit, Trash2, Save, X, Calendar, MapPin } from 'lucide-react'
+import { GraduationCap, Plus, Edit, Trash2, Save, X, Calendar, Clock } from 'lucide-react'
 import Link from 'next/link'
 
 interface EventFormData {
-  title: string
-  description: string
-  venue: string
-  start_at: string
-  end_at: string
+  event_date: string
+  day_of_week: string
+  start_time: string
+  end_time: string
+  event_category: string
+  event_name: string
+  delivery_type: string
 }
 
 export default function EventsAdminPage() {
   const [events, setEvents] = useState<AcademicCircleEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isEditing, setIsEditing] = useState<number | null>(null)
+  const [isEditing, setIsEditing] = useState<string | null>(null)
   const [formData, setFormData] = useState<EventFormData>({
-    title: '',
-    description: '',
-    venue: '',
-    start_at: '',
-    end_at: ''
+    event_date: '',
+    day_of_week: '',
+    start_time: '',
+    end_time: '',
+    event_category: '',
+    event_name: '',
+    delivery_type: ''
   })
 
   useEffect(() => {
@@ -37,7 +41,8 @@ export default function EventsAdminPage() {
       const { data, error } = await supabase
         .from('academic_circle_events')
         .select('*')
-        .order('start_at', { ascending: true })
+        .order('event_date', { ascending: true })
+        .order('start_time', { ascending: true })
 
       if (error) throw error
       setEvents(data || [])
@@ -76,7 +81,15 @@ export default function EventsAdminPage() {
       }
 
       // フォームをリセット
-      setFormData({ title: '', description: '', venue: '', start_at: '', end_at: '' })
+      setFormData({
+        event_date: '',
+        day_of_week: '',
+        start_time: '',
+        end_time: '',
+        event_category: '',
+        event_name: '',
+        delivery_type: ''
+      })
       setIsEditing(null)
       
       // データを再取得
@@ -90,15 +103,17 @@ export default function EventsAdminPage() {
   const handleEdit = (item: AcademicCircleEvent) => {
     setIsEditing(item.id)
     setFormData({
-      title: item.title || '',
-      description: item.description || '',
-      venue: item.venue || '',
-      start_at: item.start_at ? new Date(item.start_at).toISOString().slice(0, 16) : '',
-      end_at: item.end_at ? new Date(item.end_at).toISOString().slice(0, 16) : ''
+      event_date: item.event_date,
+      day_of_week: item.day_of_week,
+      start_time: item.start_time,
+      end_time: item.end_time,
+      event_category: item.event_category,
+      event_name: item.event_name,
+      delivery_type: item.delivery_type
     })
   }
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('このイベントを削除しますか？')) return
 
     try {
@@ -119,31 +134,27 @@ export default function EventsAdminPage() {
 
   const handleCancel = () => {
     setIsEditing(null)
-    setFormData({ title: '', description: '', venue: '', start_at: '', end_at: '' })
+    setFormData({
+      event_date: '',
+      day_of_week: '',
+      start_time: '',
+      end_time: '',
+      event_category: '',
+      event_name: '',
+      delivery_type: ''
+    })
   }
 
-  const getEventStatus = (startAt: string | null, endAt: string | null) => {
-    if (!startAt) return { text: '未設定', color: 'bg-gray-100 text-gray-800' }
+  const getEventStatus = (eventDate: string | null, startTime: string | null) => {
+    if (!eventDate) return { text: '未設定', color: 'bg-gray-100 text-gray-800' }
     
     const now = new Date()
-    const start = new Date(startAt)
-    const end = endAt ? new Date(endAt) : null
+    const eventDateTime = new Date(`${eventDate}T${startTime || '00:00'}`)
     
-    if (end && now > end) return { text: '終了', color: 'bg-gray-100 text-gray-800' }
-    if (now >= start) return { text: '開催中', color: 'bg-green-100 text-green-800' }
-    if (start.getTime() - now.getTime() <= 7 * 24 * 60 * 60 * 1000) return { text: '開催間近', color: 'bg-orange-100 text-orange-800' }
+    if (now > eventDateTime) return { text: '終了', color: 'bg-gray-100 text-gray-800' }
+    if (now >= eventDateTime) return { text: '開催中', color: 'bg-green-100 text-green-800' }
+    if (eventDateTime.getTime() - now.getTime() <= 7 * 24 * 60 * 60 * 1000) return { text: '開催間近', color: 'bg-orange-100 text-orange-800' }
     return { text: '予定', color: 'bg-blue-100 text-blue-800' }
-  }
-
-  const formatDateTime = (dateTime: string | null) => {
-    if (!dateTime) return '-'
-    return new Date(dateTime).toLocaleString('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
   }
 
   if (loading) {
@@ -183,27 +194,91 @@ export default function EventsAdminPage() {
         </h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                イベント日 *
+              </label>
+              <input
+                type="date"
+                required
+                value={formData.event_date}
+                onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                曜日 *
+              </label>
+              <select
+                required
+                value={formData.day_of_week}
+                onChange={(e) => setFormData({ ...formData, day_of_week: e.target.value })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">選択してください</option>
+                <option value="日">日</option>
+                <option value="月">月</option>
+                <option value="火">火</option>
+                <option value="水">水</option>
+                <option value="木">木</option>
+                <option value="金">金</option>
+                <option value="土">土</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                開始時間 *
+              </label>
+              <input
+                type="time"
+                required
+                value={formData.start_time}
+                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                終了時間
+              </label>
+              <input
+                type="time"
+                value={formData.end_time}
+                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              イベントタイトル *
+              イベントカテゴリ *
             </label>
             <input
               type="text"
               required
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="例: 地域活性化セミナー"
+              value={formData.event_category}
+              onChange={(e) => setFormData({ ...formData, event_category: e.target.value })}
+              placeholder="例: Apple活用講座, AIリテラシー講座"
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              イベント説明
+              イベント名 *
             </label>
             <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              required
+              value={formData.event_name}
+              onChange={(e) => setFormData({ ...formData, event_name: e.target.value })}
               placeholder="イベントの詳細な説明"
               rows={3}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -212,43 +287,18 @@ export default function EventsAdminPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              会場 *
+              配信方法
             </label>
-            <input
-              type="text"
-              required
-              value={formData.venue}
-              onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
-              placeholder="例: 横浜市市民活動支援センター"
+            <select
+              value={formData.delivery_type}
+              onChange={(e) => setFormData({ ...formData, delivery_type: e.target.value })}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                開始日時 *
-              </label>
-              <input
-                type="datetime-local"
-                required
-                value={formData.start_at}
-                onChange={(e) => setFormData({ ...formData, start_at: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                終了日時
-              </label>
-              <input
-                type="datetime-local"
-                value={formData.end_at}
-                onChange={(e) => setFormData({ ...formData, end_at: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+            >
+              <option value="">選択してください</option>
+              <option value="オンライン">オンライン</option>
+              <option value="オフライン">オフライン</option>
+              <option value="ハイブリッド">ハイブリッド</option>
+            </select>
           </div>
 
           <div className="flex items-center gap-3 pt-4">
@@ -309,19 +359,25 @@ export default function EventsAdminPage() {
                   ID
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  タイトル
+                  イベント日
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  説明
+                  曜日
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  会場
+                  開始時間
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  開始日時
+                  終了時間
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  終了日時
+                  イベントカテゴリ
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  イベント名
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  配信方法
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   ステータス
@@ -333,34 +389,42 @@ export default function EventsAdminPage() {
             </thead>
             <tbody className="bg-white divide-y divide-slate-200">
               {events.map((item) => {
-                const status = getEventStatus(item.start_at, item.end_at)
+                const status = getEventStatus(item.event_date, item.start_time)
                 return (
                   <tr key={item.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                       {item.id}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                      {item.title || '-'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-900 max-w-xs">
-                      <div className="truncate" title={item.description}>
-                        {item.description || '-'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4 text-slate-400" />
-                        {item.venue || '-'}
-                      </div>
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4 text-slate-400" />
-                        {formatDateTime(item.start_at)}
+                        {item.event_date}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      {item.end_at ? formatDateTime(item.end_at) : '-'}
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                        {item.day_of_week}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-4 h-4 text-slate-400" />
+                        {item.start_time}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                      {item.end_time || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                      {item.event_category}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-900 max-w-xs">
+                      <div className="truncate" title={item.event_name}>
+                        {item.event_name}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                      {item.delivery_type || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
