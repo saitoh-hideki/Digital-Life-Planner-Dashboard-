@@ -1,6 +1,8 @@
 import { format } from 'date-fns'
-import { ExternalLink, Smartphone, Newspaper, Gift, MapPin, Building2, Calendar, Users, Smartphone as PlatformIcon } from 'lucide-react'
+import { useState } from 'react'
+import { ExternalLink, Smartphone, Newspaper, Gift, MapPin, Building2, Calendar, Users, Smartphone as PlatformIcon, Eye } from 'lucide-react'
 import { SearchResult } from '@/lib/types'
+import DetailModal from './DetailModal'
 
 interface SearchResultsProps {
   results: SearchResult[]
@@ -15,6 +17,19 @@ export default function SearchResults({
   loading, 
   hasSearched 
 }: SearchResultsProps) {
+  const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
+  const openDetailModal = (result: SearchResult) => {
+    setSelectedResult(result)
+    setIsModalOpen(true)
+  }
+
+  const closeDetailModal = () => {
+    setIsModalOpen(false)
+    setSelectedResult(null)
+  }
+
   const getTypeIcon = () => {
     switch (type) {
       case 'apps':
@@ -110,97 +125,118 @@ export default function SearchResults({
   }
 
   return (
-    <div className="space-y-6">
-      {/* 結果ヘッダー */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          {getTypeIcon()}
-          <h3 className="text-xl font-semibold text-slate-800">
-            検索結果 ({results.length}件)
-          </h3>
+    <>
+      <div className="space-y-6">
+        {/* 結果ヘッダー */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            {getTypeIcon()}
+            <h3 className="text-xl font-semibold text-slate-800">
+              検索結果 ({results.length}件)
+            </h3>
+          </div>
         </div>
-      </div>
 
-      {/* カードグリッド */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {results.map((result, index) => (
-          <div 
-            key={result.id} 
-            className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-slate-100 p-6 transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.02] relative overflow-hidden"
-            style={{ animationDelay: `${index * 100}ms` }}
-          >
-            {/* 背景グラデーション */}
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-transparent to-indigo-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            
-            {/* メインコンテンツ */}
-            <div className="relative">
-              {/* ヘッダー */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2">
-                    {result.name}
-                  </h3>
-                  
-                  {result.summary && (
-                    <p className="text-slate-600 text-sm leading-relaxed line-clamp-3 mb-4">
-                      {result.summary}
-                    </p>
-                  )}
+        {/* カードグリッド */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {results.map((result, index) => (
+            <div 
+              key={result.id} 
+              className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-slate-100 p-6 transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.02] relative overflow-hidden"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              {/* 背景グラデーション */}
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-transparent to-indigo-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              
+              {/* メインコンテンツ */}
+              <div className="relative">
+                {/* ヘッダー */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2">
+                      {result.name}
+                    </h3>
+                    
+                    {result.summary && (
+                      <p className="text-slate-600 text-sm leading-relaxed line-clamp-3 mb-4">
+                        {result.summary}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 
-                {/* 外部リンクボタン */}
-                {result.url && (
-                  <a
-                    href={result.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors text-sm font-medium shrink-0 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-xl group-hover:scale-110 transform transition-transform duration-200"
-                  >
-                    詳細を見る
-                    <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
-                  </a>
-                )}
-              </div>
-              
-              {/* メタデータタグ */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {renderMetadata(result).map((item, index) => (
-                  <span 
-                    key={index}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${item.color} border border-transparent hover:border-current/20 transition-all duration-200`}
-                  >
-                    {item.icon}
-                    {item.text}
-                  </span>
-                ))}
-              </div>
-              
-              {/* タグ */}
-              {result.tags && result.tags.length > 0 && (
-                <div className="flex gap-2 flex-wrap">
-                  {result.tags.map((tag, index) => (
+                {/* メタデータタグ */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {renderMetadata(result).map((item, index) => (
                     <span 
                       key={index}
-                      className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors duration-200"
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${item.color} border border-transparent hover:border-current/20 transition-all duration-200`}
                     >
-                      #{tag}
+                      {item.icon}
+                      {item.text}
                     </span>
                   ))}
                 </div>
-              )}
-            </div>
-            
-            {/* ホバー時の矢印インジケーター */}
-            <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                
+                {/* タグ */}
+                {result.tags && result.tags.length > 0 && (
+                  <div className="flex gap-2 flex-wrap mb-4">
+                    {result.tags.map((tag, index) => (
+                      <span 
+                        key={index}
+                        className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors duration-200"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                
+                {/* アクションボタン */}
+                <div className="flex gap-3">
+                  {/* 詳細を見るボタン */}
+                  <button
+                    onClick={() => openDetailModal(result)}
+                    className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors text-sm font-medium bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl group-hover:scale-105 transform transition-transform duration-200"
+                  >
+                    <Eye className="w-4 h-4" />
+                    詳細を見る
+                  </button>
+                  
+                  {/* 外部リンクボタン */}
+                  {result.url && (
+                    <a
+                      href={result.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-green-600 hover:text-green-700 transition-colors text-sm font-medium bg-green-50 hover:bg-green-100 px-4 py-2 rounded-xl group-hover:scale-105 transform transition-transform duration-200"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      公式サイト
+                    </a>
+                  )}
+                </div>
+              </div>
+              
+              {/* ホバー時の矢印インジケーター */}
+              <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
+
+      {/* 詳細モーダル */}
+      <DetailModal
+        result={selectedResult}
+        isOpen={isModalOpen}
+        onClose={closeDetailModal}
+      />
+    </>
   )
 }
