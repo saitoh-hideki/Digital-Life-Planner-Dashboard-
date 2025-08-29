@@ -73,14 +73,10 @@ export interface AcademicCircleEvent {
 
 export interface LocalMediaKnowledge {
   id?: number
-  region_id?: number
-  title: string
-  description?: string
-  media_type?: string
   url?: string
-  issued_on?: string
-  author?: string
-  regions?: Region
+  file_name?: string
+  created_at?: string
+  updated_at?: string
 }
 
 export interface NewsArchive {

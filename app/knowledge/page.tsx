@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, FileText, Calendar, User, ExternalLink } from 'lucide-react'
+import { ChevronLeft, FileText, Calendar } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { LocalMediaKnowledge } from '@/lib/types'
 import { format } from 'date-fns'
@@ -21,11 +21,8 @@ export default function KnowledgePage() {
     try {
       const { data, error } = await supabase
         .from('local_media_knowledge')
-        .select(`
-          *,
-          regions:region_id(code, name)
-        `)
-        .order('issued_on', { ascending: false })
+        .select('*')
+        .order('created_at', { ascending: false })
         .limit(50)
       
       if (error) throw error
@@ -34,19 +31,6 @@ export default function KnowledgePage() {
       console.error('Error fetching knowledge:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const getMediaTypeIcon = (mediaType?: string) => {
-    switch (mediaType?.toLowerCase()) {
-      case 'pdf':
-        return <FileText className="w-4 h-4" />
-      case 'video':
-        return <div className="w-4 h-4 bg-red-500 rounded" />
-      case 'audio':
-        return <div className="w-4 h-4 bg-blue-500 rounded" />
-      default:
-        return <FileText className="w-4 h-4" />
     }
   }
 
@@ -82,55 +66,42 @@ export default function KnowledgePage() {
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2">
-                  {getMediaTypeIcon(item.media_type)}
+                  <FileText className="w-4 h-4" />
                   <span className="text-sm text-gray-500">
-                    {item.media_type?.toUpperCase() || 'DOCUMENT'}
+                    FILE
                   </span>
-                  {item.regions && (
-                    <span className="text-blue-600 font-medium text-sm">
-                      {item.regions.name}
-                    </span>
-                  )}
                 </div>
                 
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {item.title}
+                  {item.file_name || `ファイル ${item.id}`}
                 </h3>
                 
-                {item.description && (
-                  <p className="text-gray-600 mb-3 line-clamp-2">
-                    {item.description}
-                  </p>
-                )}
-                
                 <div className="space-y-2 text-sm text-gray-500">
-                  {item.issued_on && (
+                  {item.created_at && (
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
                       <span>
-                        {format(new Date(item.issued_on), 'yyyy/MM/dd', { locale: ja })}
+                        {format(new Date(item.created_at), 'yyyy/MM/dd', { locale: ja })}
                       </span>
                     </div>
                   )}
                   
-                  {item.author && (
+                  {item.url && item.url !== 'EMPTY' && (
                     <div className="flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      <span>{item.author}</span>
+                      <span>URL: {item.url}</span>
                     </div>
                   )}
                 </div>
               </div>
               
-              {item.url && (
+              {item.url && item.url !== 'EMPTY' && (
                 <a
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm shrink-0"
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                 >
-                  ダウンロード
-                  <ExternalLink className="w-4 h-4" />
+                  ファイルを開く
                 </a>
               )}
             </div>

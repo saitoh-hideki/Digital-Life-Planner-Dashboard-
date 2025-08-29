@@ -81,7 +81,7 @@ export default function DashboardPage() {
       const { data: knowledgeData, error: knowledgeError } = await supabase
         .from('local_media_knowledge')
         .select('*')
-        .order('issued_on', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(3)
       
       if (knowledgeError) throw knowledgeError
@@ -318,11 +318,10 @@ export default function DashboardPage() {
               knowledge.map((item) => (
                 <InfoItem
                   key={item.id}
-                  title={item.title}
-                  description={item.description}
+                  title={item.file_name || `ファイル ${item.id}`}
+                  description={item.url && item.url !== 'EMPTY' ? item.url : 'ファイルがアップロードされていません'}
                   metadata={[
-                    item.media_type || '',
-                    item.issued_on ? format(new Date(item.issued_on), 'yyyy/MM/dd') : ''
+                    item.created_at ? format(new Date(item.created_at), 'yyyy/MM/dd') : ''
                   ].filter(Boolean)}
                 />
               ))
