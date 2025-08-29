@@ -336,8 +336,21 @@ export default function DashboardPage() {
                   <InfoItem
                     key={item.id}
                     title={item.file_name || `ファイル ${item.id}`}
-                    description={item.url && item.url !== 'EMPTY' ? item.url : 'ファイルがアップロードされていません'}
+                    description={item.url && item.url !== 'EMPTY' ? (
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                        ファイルを開く
+                      </a>
+                    ) : 'ファイルがアップロードされていません'}
                     metadata={[
+                      item.region || '',
                       item.created_at ? format(new Date(item.created_at), 'yyyy/MM/dd') : ''
                     ].filter(Boolean)}
                     badge={getFileTypeBadge(item.file_name || null)}

@@ -219,7 +219,7 @@ export default function SearchPage() {
         </div>
         
         {/* 検索フォーム */}
-        <SearchForm onSearch={handleSearch} />
+        <SearchForm onSearch={handleSearch} searchType={searchType} />
         
         {/* 検索結果 */}
         <div className="animate-fade-in">

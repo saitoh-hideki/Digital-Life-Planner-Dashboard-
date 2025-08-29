@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { LocalNews } from '@/lib/types'
 import { Newspaper, Plus, Edit, Trash2, Save, X, MapPin, Tag } from 'lucide-react'
+import Link from 'next/link'
 
 interface NewsFormData {
   name: string
@@ -179,8 +180,17 @@ export default function NewsAdminPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">地域ニュース管理</h1>
-          <p className="text-slate-600 mt-2">地域のニュース記事を管理します</p>
+          <p className="text-slate-600 mt-2">地域のニュース情報を管理します</p>
         </div>
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          ダッシュボードに戻る
+        </Link>
       </div>
 
       {/* フォーム */}

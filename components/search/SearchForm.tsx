@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Search, RotateCcw, MapPin, Building2, Hash } from 'lucide-react'
-import { prefectures, municipalities, defaultMunicipalities } from '@/lib/prefectures'
+import { prefectures, getMunicipalitiesByPrefecture, defaultMunicipalities } from '@/lib/prefectures'
 
 interface SearchFormProps {
   onSearch: (params: {
@@ -10,18 +10,35 @@ interface SearchFormProps {
     municipality: string
     keyword: string
   }) => void
+  searchType?: 'apps' | 'subsidies' | 'news'
 }
 
-export default function SearchForm({ onSearch }: SearchFormProps) {
+export default function SearchForm({ onSearch, searchType = 'apps' }: SearchFormProps) {
   const [prefecture, setPrefecture] = useState('')
   const [municipality, setMunicipality] = useState('')
   const [keyword, setKeyword] = useState('')
   const [availableMunicipalities, setAvailableMunicipalities] = useState(defaultMunicipalities)
 
+  // 検索タイプに応じた説明文を取得
+  const getSearchDescription = () => {
+    switch (searchType) {
+      case 'apps':
+        return '都道府県・市区町村・キーワードで地域アプリを検索できます'
+      case 'subsidies':
+        return '都道府県・市区町村・キーワードで補助金・助成金を検索できます'
+      case 'news':
+        return '都道府県・市区町村・キーワードで地域ニュースを検索できます'
+      default:
+        return '都道府県・市区町村・キーワードで地域情報を検索できます'
+    }
+  }
+
   // 都道府県が変更されたときに市町村をリセット
   useEffect(() => {
+    console.log('都道府県が変更されました:', prefecture)
     if (prefecture) {
-      const municipalitiesList = municipalities[prefecture as keyof typeof municipalities] || []
+      const municipalitiesList = getMunicipalitiesByPrefecture(prefecture)
+      console.log('取得された市町村リスト:', municipalitiesList)
       setAvailableMunicipalities(municipalitiesList)
     } else {
       setAvailableMunicipalities(defaultMunicipalities)
@@ -54,7 +71,7 @@ export default function SearchForm({ onSearch }: SearchFormProps) {
             地域を選んで検索
           </h2>
           <p className="text-slate-600 text-sm">
-            都道府県・市区町村・キーワードで地域アプリを検索できます
+            {getSearchDescription()}
           </p>
         </div>
         

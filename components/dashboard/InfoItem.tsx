@@ -1,8 +1,9 @@
 import { Tag, Calendar, MapPin, Building } from 'lucide-react'
+import { ReactNode } from 'react'
 
 interface InfoItemProps {
   title: string
-  description?: string
+  description?: string | ReactNode
   metadata?: string[]
   badge?: string
   badgeColor?: string
@@ -37,9 +38,13 @@ export default function InfoItem({ title, description, metadata, badge, badgeCol
             </h3>
             
             {description && (
-              <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed mb-3">
-                {description}
-              </p>
+              <div className="text-sm text-slate-600 line-clamp-2 leading-relaxed mb-3">
+                {typeof description === 'string' ? (
+                  <p>{description}</p>
+                ) : (
+                  description
+                )}
+              </div>
             )}
             
             {metadata && metadata.length > 0 && (
