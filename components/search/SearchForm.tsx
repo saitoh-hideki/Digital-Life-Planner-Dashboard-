@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, RotateCcw } from 'lucide-react'
+import { Search, RotateCcw, MapPin, Building2, Hash } from 'lucide-react'
 import { prefectures, municipalities, defaultMunicipalities } from '@/lib/prefectures'
 
 interface SearchFormProps {
@@ -43,80 +43,116 @@ export default function SearchForm({ onSearch }: SearchFormProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-      <h2 className="text-lg font-semibold mb-4">地域を選んで検索</h2>
-      <form onSubmit={handleSearch} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label htmlFor="prefecture" className="block text-sm font-medium text-gray-700 mb-1">
-              都道府県
-            </label>
-            <select
-              id="prefecture"
-              value={prefecture}
-              onChange={(e) => setPrefecture(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {prefectures.map(pref => (
-                <option key={pref.value} value={pref.value}>
-                  {pref.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="municipality" className="block text-sm font-medium text-gray-700 mb-1">
-              市区町村
-            </label>
-            <select
-              id="municipality"
-              value={municipality}
-              onChange={(e) => setMunicipality(e.target.value)}
-              disabled={!prefecture}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-            >
-              {availableMunicipalities.map(muni => (
-                <option key={muni.value} value={muni.value}>
-                  {muni.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="keyword" className="block text-sm font-medium text-gray-700 mb-1">
-              キーワード
-            </label>
-            <input
-              type="text"
-              id="keyword"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="検索キーワードを入力"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+    <div className="relative">
+      {/* 背景グラデーション */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-indigo-50 rounded-3xl"></div>
+      
+      {/* メインコンテンツ */}
+      <div className="relative bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-8 mb-8">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+            地域を選んで検索
+          </h2>
+          <p className="text-slate-600 text-sm">
+            都道府県・市区町村・キーワードで地域アプリを検索できます
+          </p>
         </div>
+        
+        <form onSubmit={handleSearch} className="space-y-6">
+          {/* 検索フィールド */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* 都道府県 */}
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <MapPin className="h-5 w-5 text-blue-500 group-focus-within:text-blue-600 transition-colors" />
+              </div>
+              <select
+                id="prefecture"
+                value={prefecture}
+                onChange={(e) => setPrefecture(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 bg-white/80 backdrop-blur-sm transition-all duration-200 hover:border-slate-300 text-slate-700 font-medium"
+              >
+                <option value="">都道府県を選択</option>
+                {prefectures.map(pref => (
+                  <option key={pref.value} value={pref.value}>
+                    {pref.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div className="flex gap-3 justify-end">
-          <button
-            type="button"
-            onClick={handleReset}
-            className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors flex items-center gap-2"
-          >
-            <RotateCcw className="w-4 h-4" />
-            リセット
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors flex items-center gap-2"
-          >
-            <Search className="w-4 h-4" />
-            検索する
-          </button>
-        </div>
-      </form>
+            {/* 市区町村 */}
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Building2 className="h-5 w-5 text-indigo-500 group-focus-within:text-indigo-600 transition-colors" />
+              </div>
+              <select
+                id="municipality"
+                value={municipality}
+                onChange={(e) => setMunicipality(e.target.value)}
+                disabled={!prefecture}
+                className="w-full pl-12 pr-4 py-4 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white/80 backdrop-blur-sm transition-all duration-200 hover:border-slate-300 text-slate-700 font-medium disabled:bg-slate-100/80 disabled:cursor-not-allowed disabled:border-slate-200"
+              >
+                <option value="">市区町村を選択</option>
+                {availableMunicipalities.map(muni => (
+                  <option key={muni.value} value={muni.value}>
+                    {muni.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* キーワード */}
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Hash className="h-5 w-5 text-sky-500 group-focus-within:text-sky-600 transition-colors" />
+              </div>
+              <input
+                type="text"
+                id="keyword"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder="検索キーワードを入力"
+                className="w-full pl-12 pr-12 py-4 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-sky-500/20 focus:border-sky-500 bg-white/80 backdrop-blur-sm transition-all duration-200 hover:border-slate-300 text-slate-700 font-medium"
+              />
+              {keyword && (
+                <button
+                  type="button"
+                  onClick={() => setKeyword('')}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* ボタン群 */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <button
+              type="button"
+              onClick={handleReset}
+              className="group px-8 py-4 text-slate-700 bg-white border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-2xl transition-all duration-200 flex items-center gap-3 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            >
+              <RotateCcw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-300" />
+              リセット
+            </button>
+            
+            <button
+              type="submit"
+              className="group relative px-8 py-4 text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 rounded-2xl transition-all duration-300 flex items-center gap-3 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 overflow-hidden"
+            >
+              {/* 光沢エフェクト */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+              
+              <Search className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
+              検索する
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }
