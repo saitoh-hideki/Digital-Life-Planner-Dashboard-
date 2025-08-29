@@ -151,9 +151,9 @@ export default function DashboardPage() {
       {/* ヘッダー・ヒーロー */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-slate-100/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div className="flex flex-col items-center justify-center text-center">
             <div className="space-y-4">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center justify-center gap-4">
                 <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl text-white text-3xl shadow-lg">
                   📰
                 </div>
@@ -333,29 +333,59 @@ export default function DashboardPage() {
             {knowledge.length > 0 ? (
               <div className="space-y-4">
                 {knowledge.map((item) => (
-                  <InfoItem
-                    key={item.id}
-                    title={item.file_name || `ファイル ${item.id}`}
-                    description={item.url && item.url !== 'EMPTY' ? (
-                      <a
-                        href={item.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 underline flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                        ファイルを開く
-                      </a>
-                    ) : 'ファイルがアップロードされていません'}
-                    metadata={[
-                      item.region || '',
-                      item.created_at ? format(new Date(item.created_at), 'yyyy/MM/dd') : ''
-                    ].filter(Boolean)}
-                    badge={getFileTypeBadge(item.file_name || null)}
-                    badgeColor="indigo"
-                  />
+                  <div key={item.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group">
+                    <div className="flex items-start justify-between gap-3">
+                      {/* 左側：ファイル種別アイコン */}
+                      <div className="flex-shrink-0">
+                        <div className={`w-10 h-10 bg-gradient-to-br ${getFileTypeBackground(item.file_name || null)} rounded-full flex items-center justify-center text-white text-lg shadow-lg`}>
+                          {getFileTypeIcon(item.file_name || null)}
+                        </div>
+                      </div>
+                      
+                      {/* 中央：ファイル情報 */}
+                      <div className="flex-1 min-w-0">
+                        {/* タイトル */}
+                        <h4 className="font-semibold text-slate-900 text-sm mb-2 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2">
+                          {item.title || item.file_name || `ファイル ${item.id}`}
+                        </h4>
+                        
+                        {/* 地域情報 */}
+                        {item.region && (
+                          <div className="flex items-center gap-1 mb-1">
+                            <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">
+                              {item.region}
+                            </span>
+                          </div>
+                        )}
+                        
+                        {/* 作成日 */}
+                        {item.created_at && (
+                          <div className="text-xs text-slate-500">
+                            {format(new Date(item.created_at), 'yyyy/MM/dd')}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* 右側：操作ボタン */}
+                      {item.url && item.url !== 'EMPTY' ? (
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 text-xs font-semibold shadow-sm hover:shadow-md transform hover:-translate-y-0.5 flex-shrink-0"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          開く
+                        </a>
+                      ) : (
+                        <div className="flex items-center gap-1 px-3 py-2 bg-slate-100 text-slate-400 rounded-lg text-xs font-semibold flex-shrink-0">
+                          <span className="text-xs">なし</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : (
@@ -490,5 +520,35 @@ function getFileTypeBadge(fileName: string | null): string {
     case 'ppt':
     case 'pptx': return 'Presentation'
     default: return 'File'
+  }
+}
+
+function getFileTypeBackground(fileName: string | null): string {
+  if (!fileName) return 'from-slate-500 to-slate-600'
+  const ext = fileName.split('.').pop()?.toLowerCase()
+  switch (ext) {
+    case 'pdf': return 'from-blue-500 to-indigo-600'
+    case 'doc':
+    case 'docx': return 'from-green-500 to-teal-600'
+    case 'xls':
+    case 'xlsx': return 'from-blue-500 to-indigo-600'
+    case 'ppt':
+    case 'pptx': return 'from-purple-500 to-pink-600'
+    default: return 'from-slate-500 to-slate-600'
+  }
+}
+
+function getFileTypeIcon(fileName: string | null): string {
+  if (!fileName) return '📄'
+  const ext = fileName.split('.').pop()?.toLowerCase()
+  switch (ext) {
+    case 'pdf': return '📄'
+    case 'doc':
+    case 'docx': return '📑'
+    case 'xls':
+    case 'xlsx': return '📊'
+    case 'ppt':
+    case 'pptx': return '📽️'
+    default: return '📄'
   }
 }
