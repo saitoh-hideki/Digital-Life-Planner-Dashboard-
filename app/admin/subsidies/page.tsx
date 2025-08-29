@@ -2,48 +2,46 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { LocalNews } from '@/lib/types'
-import { Newspaper, Plus, Edit, Trash2, Save, X, MapPin, Tag } from 'lucide-react'
+import { Subsidy } from '@/lib/types'
+import { DollarSign, Plus, Edit, Trash2, Save, X, Calendar } from 'lucide-react'
 
-interface NewsFormData {
+interface SubsidyFormData {
   name: string
   summary: string
-  source_name: string
-  prefecture: string
-  status: string
-  tags: string
+  audience: string
+  apply_start: string
+  apply_end: string
 }
 
-export default function NewsAdminPage() {
-  const [news, setNews] = useState<LocalNews[]>([])
+export default function SubsidiesAdminPage() {
+  const [subsidies, setSubsidies] = useState<Subsidy[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState<number | null>(null)
-  const [formData, setFormData] = useState<NewsFormData>({
+  const [formData, setFormData] = useState<SubsidyFormData>({
     name: '',
     summary: '',
-    source_name: '',
-    prefecture: '',
-    status: 'draft',
-    tags: ''
+    audience: '',
+    apply_start: '',
+    apply_end: ''
   })
 
   useEffect(() => {
-    fetchNews()
+    fetchSubsidies()
   }, [])
 
-  const fetchNews = async () => {
+  const fetchSubsidies = async () => {
     try {
       setError(null)
       const { data, error } = await supabase
-        .from('local_news')
+        .from('subsidies')
         .select('*')
-        .order('published_at', { ascending: false })
+        .order('created_at', { ascending: false })
 
       if (error) throw error
-      setNews(data || [])
+      setSubsidies(data || [])
     } catch (error) {
-      console.error('Error fetching news:', error)
+      console.error('Error fetching subsidies:', error)
       setError('データの取得中にエラーが発生しました')
     } finally {
       setLoading(false)
@@ -56,20 +54,12 @@ export default function NewsAdminPage() {
     try {
       setError(null)
       
-      // タグを配列に変換
-      const tagsArray = formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : []
-      
       if (isEditing) {
         // 更新
         const { error } = await supabase
-          .from('local_news')
+          .from('subsidies')
           .update({
-            name: formData.name,
-            summary: formData.summary,
-            source_name: formData.source_name,
-            prefecture: formData.prefecture,
-            status: formData.status,
-            tags: tagsArray,
+            ...formData,
             updated_at: new Date().toISOString()
           })
           .eq('id', isEditing)
@@ -78,90 +68,70 @@ export default function NewsAdminPage() {
       } else {
         // 新規作成
         const { error } = await supabase
-          .from('local_news')
-          .insert([{
-            name: formData.name,
-            summary: formData.summary,
-            source_name: formData.source_name,
-            prefecture: formData.prefecture,
-            status: formData.status,
-            tags: tagsArray,
-            published_at: formData.status === 'published' ? new Date().toISOString() : null
-          }])
+          .from('subsidies')
+          .insert([formData])
 
         if (error) throw error
       }
 
       // フォームをリセット
-      setFormData({ name: '', summary: '', source_name: '', prefecture: '', status: 'draft', tags: '' })
+      setFormData({ name: '', summary: '', audience: '', apply_start: '', apply_end: '' })
       setIsEditing(null)
       
       // データを再取得
-      await fetchNews()
+      await fetchSubsidies()
     } catch (error) {
-      console.error('Error saving news:', error)
+      console.error('Error saving subsidy:', error)
       setError('データの保存中にエラーが発生しました')
     }
   }
 
-  const handleEdit = (item: LocalNews) => {
+  const handleEdit = (item: Subsidy) => {
     setIsEditing(item.id)
     setFormData({
       name: item.name || '',
       summary: item.summary || '',
-      source_name: item.source_name || '',
-      prefecture: item.prefecture || '',
-      status: item.status || 'draft',
-      tags: Array.isArray(item.tags) ? item.tags.join(', ') : ''
+      audience: item.audience || '',
+      apply_start: item.apply_start ? new Date(item.apply_start).toISOString().split('T')[0] : '',
+      apply_end: item.apply_end ? new Date(item.apply_end).toISOString().split('T')[0] : ''
     })
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('このニュースを削除しますか？')) return
+    if (!confirm('この補助金・助成金を削除しますか？')) return
 
     try {
       setError(null)
       const { error } = await supabase
-        .from('local_news')
+        .from('subsidies')
         .delete()
         .eq('id', id)
 
       if (error) throw error
       
-      await fetchNews()
+      await fetchSubsidies()
     } catch (error) {
-      console.error('Error deleting news:', error)
+      console.error('Error deleting subsidy:', error)
       setError('データの削除中にエラーが発生しました')
     }
   }
 
   const handleCancel = () => {
     setIsEditing(null)
-    setFormData({ name: '', summary: '', source_name: '', prefecture: '', status: 'draft', tags: '' })
+    setFormData({ name: '', summary: '', audience: '', apply_start: '', apply_end: '' })
   }
 
-  const getStatusBadge = (status: string | null) => {
-    switch (status) {
-      case 'published':
-        return { text: '公開', color: 'bg-green-100 text-green-800' }
-      case 'draft':
-        return { text: '下書き', color: 'bg-yellow-100 text-yellow-800' }
-      case 'archived':
-        return { text: 'アーカイブ', color: 'bg-gray-100 text-gray-800' }
-      default:
-        return { text: '未設定', color: 'bg-slate-100 text-slate-800' }
-    }
+  const getStatusBadge = (endDate: string | null) => {
+    if (!endDate) return { text: '情報なし', color: 'bg-gray-100 text-gray-800' }
+    
+    const now = new Date()
+    const end = new Date(endDate)
+    const diffDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    
+    if (diffDays < 0) return { text: '終了', color: 'bg-gray-100 text-gray-800' }
+    if (diffDays <= 7) return { text: '締切間近', color: 'bg-orange-100 text-orange-800' }
+    return { text: '余裕あり', color: 'bg-green-100 text-green-800' }
   }
-
-  const prefectures = [
-    '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
-    '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
-    '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県',
-    '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県',
-    '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県',
-    '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県',
-    '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'
-  ]
 
   if (loading) {
     return (
@@ -178,103 +148,81 @@ export default function NewsAdminPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">地域ニュース管理</h1>
-          <p className="text-slate-600 mt-2">地域のニュース記事を管理します</p>
+          <h1 className="text-3xl font-bold text-slate-900">補助金・助成金管理</h1>
+          <p className="text-slate-600 mt-2">地域の補助金・助成金情報を管理します</p>
         </div>
       </div>
 
       {/* フォーム */}
       <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
         <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
-          <Newspaper className="w-5 h-5" />
-          {isEditing ? 'ニュース記事を編集' : '新しいニュース記事を追加'}
+          <DollarSign className="w-5 h-5" />
+          {isEditing ? '補助金・助成金を編集' : '新しい補助金・助成金を追加'}
         </h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              記事タイトル *
+              名称 *
             </label>
             <input
               type="text"
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="例: 横浜市、DX推進で新サービス開始"
+              placeholder="例: 創業支援補助金"
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              記事概要 *
+              概要 *
             </label>
             <textarea
               required
               value={formData.summary}
               onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
-              placeholder="記事の内容を簡潔に説明"
+              placeholder="補助金・助成金の詳細な説明"
               rows={3}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                出典名
+                対象者
               </label>
               <input
                 type="text"
-                value={formData.source_name}
-                onChange={(e) => setFormData({ ...formData, source_name: e.target.value })}
-                placeholder="例: 横浜市役所、地域メディア"
+                value={formData.audience}
+                onChange={(e) => setFormData({ ...formData, audience: e.target.value })}
+                placeholder="例: 中小企業、個人事業主"
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                都道府県
+                申請開始日
               </label>
-              <select
-                value={formData.prefecture}
-                onChange={(e) => setFormData({ ...formData, prefecture: e.target.value })}
+              <input
+                type="date"
+                value={formData.apply_start}
+                onChange={(e) => setFormData({ ...formData, apply_start: e.target.value })}
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">都道府県を選択</option>
-                {prefectures.map((pref) => (
-                  <option key={pref} value={pref}>{pref}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                ステータス
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="draft">下書き</option>
-                <option value="published">公開</option>
-                <option value="archived">アーカイブ</option>
-              </select>
+              />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                タグ（カンマ区切り）
+                申請終了日
               </label>
               <input
-                type="text"
-                value={formData.tags}
-                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                placeholder="例: 行政DX, シニア支援, 地域活性化"
+                type="date"
+                value={formData.apply_end}
+                onChange={(e) => setFormData({ ...formData, apply_end: e.target.value })}
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -324,10 +272,10 @@ export default function NewsAdminPage() {
         </div>
       )}
 
-      {/* ニュース一覧 */}
+      {/* 補助金・助成金一覧 */}
       <div className="bg-white rounded-2xl shadow-lg border border-slate-200">
         <div className="px-6 py-4 border-b border-slate-200">
-          <h2 className="text-xl font-semibold text-slate-900">ニュース一覧</h2>
+          <h2 className="text-xl font-semibold text-slate-900">補助金・助成金一覧</h2>
         </div>
         
         <div className="overflow-x-auto">
@@ -338,22 +286,19 @@ export default function NewsAdminPage() {
                   ID
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  タイトル
+                  名称
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   概要
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  出典
+                  対象者
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  地域
+                  申請期間
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   ステータス
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  タグ
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   操作
@@ -361,8 +306,8 @@ export default function NewsAdminPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-200">
-              {news.map((item) => {
-                const statusBadge = getStatusBadge(item.status)
+              {subsidies.map((item) => {
+                const status = getStatusBadge(item.apply_end)
                 return (
                   <tr key={item.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
@@ -377,34 +322,22 @@ export default function NewsAdminPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      {item.source_name || '-'}
+                      {item.audience || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      {item.prefecture || '-'}
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4 text-slate-400" />
+                        <span>
+                          {item.apply_start ? new Date(item.apply_start).toLocaleDateString('ja-JP') : '-'}
+                          {' → '}
+                          {item.apply_end ? new Date(item.apply_end).toLocaleDateString('ja-JP') : '-'}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadge.color}`}>
-                        {statusBadge.text}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
+                        {status.text}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-900 max-w-xs">
-                      {Array.isArray(item.tags) && item.tags.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {item.tags.slice(0, 3).map((tag, index) => (
-                            <span
-                              key={index}
-                              className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                          {item.tags.length > 3 && (
-                            <span className="text-xs text-slate-500">+{item.tags.length - 3}</span>
-                          )}
-                        </div>
-                      ) : (
-                        '-'
-                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
@@ -431,11 +364,11 @@ export default function NewsAdminPage() {
           </table>
         </div>
         
-        {news.length === 0 && (
+        {subsidies.length === 0 && (
           <div className="text-center py-12">
-            <Newspaper className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500 text-lg">地域ニュースはまだありません</p>
-            <p className="text-slate-400 text-sm mt-2">新しいニュース記事を追加してください</p>
+            <DollarSign className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-500 text-lg">補助金・助成金情報はまだありません</p>
+            <p className="text-slate-400 text-sm mt-2">新しい補助金・助成金を追加してください</p>
           </div>
         )}
       </div>

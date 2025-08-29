@@ -2,48 +2,46 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { LocalNews } from '@/lib/types'
-import { Newspaper, Plus, Edit, Trash2, Save, X, MapPin, Tag } from 'lucide-react'
+import { AcademicCircleEvent } from '@/lib/types'
+import { GraduationCap, Plus, Edit, Trash2, Save, X, Calendar, MapPin } from 'lucide-react'
 
-interface NewsFormData {
-  name: string
-  summary: string
-  source_name: string
-  prefecture: string
-  status: string
-  tags: string
+interface EventFormData {
+  title: string
+  description: string
+  venue: string
+  start_at: string
+  end_at: string
 }
 
-export default function NewsAdminPage() {
-  const [news, setNews] = useState<LocalNews[]>([])
+export default function EventsAdminPage() {
+  const [events, setEvents] = useState<AcademicCircleEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState<number | null>(null)
-  const [formData, setFormData] = useState<NewsFormData>({
-    name: '',
-    summary: '',
-    source_name: '',
-    prefecture: '',
-    status: 'draft',
-    tags: ''
+  const [formData, setFormData] = useState<EventFormData>({
+    title: '',
+    description: '',
+    venue: '',
+    start_at: '',
+    end_at: ''
   })
 
   useEffect(() => {
-    fetchNews()
+    fetchEvents()
   }, [])
 
-  const fetchNews = async () => {
+  const fetchEvents = async () => {
     try {
       setError(null)
       const { data, error } = await supabase
-        .from('local_news')
+        .from('academic_circle_events')
         .select('*')
-        .order('published_at', { ascending: false })
+        .order('start_at', { ascending: true })
 
       if (error) throw error
-      setNews(data || [])
+      setEvents(data || [])
     } catch (error) {
-      console.error('Error fetching news:', error)
+      console.error('Error fetching events:', error)
       setError('データの取得中にエラーが発生しました')
     } finally {
       setLoading(false)
@@ -56,20 +54,12 @@ export default function NewsAdminPage() {
     try {
       setError(null)
       
-      // タグを配列に変換
-      const tagsArray = formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : []
-      
       if (isEditing) {
         // 更新
         const { error } = await supabase
-          .from('local_news')
+          .from('academic_circle_events')
           .update({
-            name: formData.name,
-            summary: formData.summary,
-            source_name: formData.source_name,
-            prefecture: formData.prefecture,
-            status: formData.status,
-            tags: tagsArray,
+            ...formData,
             updated_at: new Date().toISOString()
           })
           .eq('id', isEditing)
@@ -78,90 +68,82 @@ export default function NewsAdminPage() {
       } else {
         // 新規作成
         const { error } = await supabase
-          .from('local_news')
-          .insert([{
-            name: formData.name,
-            summary: formData.summary,
-            source_name: formData.source_name,
-            prefecture: formData.prefecture,
-            status: formData.status,
-            tags: tagsArray,
-            published_at: formData.status === 'published' ? new Date().toISOString() : null
-          }])
+          .from('academic_circle_events')
+          .insert([formData])
 
         if (error) throw error
       }
 
       // フォームをリセット
-      setFormData({ name: '', summary: '', source_name: '', prefecture: '', status: 'draft', tags: '' })
+      setFormData({ title: '', description: '', venue: '', start_at: '', end_at: '' })
       setIsEditing(null)
       
       // データを再取得
-      await fetchNews()
+      await fetchEvents()
     } catch (error) {
-      console.error('Error saving news:', error)
+      console.error('Error saving event:', error)
       setError('データの保存中にエラーが発生しました')
     }
   }
 
-  const handleEdit = (item: LocalNews) => {
+  const handleEdit = (item: AcademicCircleEvent) => {
     setIsEditing(item.id)
     setFormData({
-      name: item.name || '',
-      summary: item.summary || '',
-      source_name: item.source_name || '',
-      prefecture: item.prefecture || '',
-      status: item.status || 'draft',
-      tags: Array.isArray(item.tags) ? item.tags.join(', ') : ''
+      title: item.title || '',
+      description: item.description || '',
+      venue: item.venue || '',
+      start_at: item.start_at ? new Date(item.start_at).toISOString().slice(0, 16) : '',
+      end_at: item.end_at ? new Date(item.end_at).toISOString().slice(0, 16) : ''
     })
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('このニュースを削除しますか？')) return
+    if (!confirm('このイベントを削除しますか？')) return
 
     try {
       setError(null)
       const { error } = await supabase
-        .from('local_news')
+        .from('academic_circle_events')
         .delete()
         .eq('id', id)
 
       if (error) throw error
       
-      await fetchNews()
+      await fetchEvents()
     } catch (error) {
-      console.error('Error deleting news:', error)
+      console.error('Error deleting event:', error)
       setError('データの削除中にエラーが発生しました')
     }
   }
 
   const handleCancel = () => {
     setIsEditing(null)
-    setFormData({ name: '', summary: '', source_name: '', prefecture: '', status: 'draft', tags: '' })
+    setFormData({ title: '', description: '', venue: '', start_at: '', end_at: '' })
   }
 
-  const getStatusBadge = (status: string | null) => {
-    switch (status) {
-      case 'published':
-        return { text: '公開', color: 'bg-green-100 text-green-800' }
-      case 'draft':
-        return { text: '下書き', color: 'bg-yellow-100 text-yellow-800' }
-      case 'archived':
-        return { text: 'アーカイブ', color: 'bg-gray-100 text-gray-800' }
-      default:
-        return { text: '未設定', color: 'bg-slate-100 text-slate-800' }
-    }
+  const getEventStatus = (startAt: string | null, endAt: string | null) => {
+    if (!startAt) return { text: '未設定', color: 'bg-gray-100 text-gray-800' }
+    
+    const now = new Date()
+    const start = new Date(startAt)
+    const end = endAt ? new Date(endAt) : null
+    
+    if (end && now > end) return { text: '終了', color: 'bg-gray-100 text-gray-800' }
+    if (now >= start) return { text: '開催中', color: 'bg-green-100 text-green-800' }
+    if (start.getTime() - now.getTime() <= 7 * 24 * 60 * 60 * 1000) return { text: '開催間近', color: 'bg-orange-100 text-orange-800' }
+    return { text: '予定', color: 'bg-blue-100 text-blue-800' }
   }
 
-  const prefectures = [
-    '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
-    '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
-    '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県',
-    '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県',
-    '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県',
-    '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県',
-    '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'
-  ]
+  const formatDateTime = (dateTime: string | null) => {
+    if (!dateTime) return '-'
+    return new Date(dateTime).toLocaleString('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
 
   if (loading) {
     return (
@@ -178,43 +160,56 @@ export default function NewsAdminPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">地域ニュース管理</h1>
-          <p className="text-slate-600 mt-2">地域のニュース記事を管理します</p>
+          <h1 className="text-3xl font-bold text-slate-900">アカデミックサークル管理</h1>
+          <p className="text-slate-600 mt-2">学術イベントやサークル活動の情報を管理します</p>
         </div>
       </div>
 
       {/* フォーム */}
       <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
         <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
-          <Newspaper className="w-5 h-5" />
-          {isEditing ? 'ニュース記事を編集' : '新しいニュース記事を追加'}
+          <GraduationCap className="w-5 h-5" />
+          {isEditing ? 'イベント情報を編集' : '新しいイベントを追加'}
         </h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              記事タイトル *
+              イベントタイトル *
             </label>
             <input
               type="text"
               required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="例: 横浜市、DX推進で新サービス開始"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              placeholder="例: 地域活性化セミナー"
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              記事概要 *
+              イベント説明
             </label>
             <textarea
-              required
-              value={formData.summary}
-              onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
-              placeholder="記事の内容を簡潔に説明"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="イベントの詳細な説明"
               rows={3}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              会場 *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.venue}
+              onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
+              placeholder="例: 横浜市市民活動支援センター"
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -222,59 +217,25 @@ export default function NewsAdminPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                出典名
+                開始日時 *
               </label>
               <input
-                type="text"
-                value={formData.source_name}
-                onChange={(e) => setFormData({ ...formData, source_name: e.target.value })}
-                placeholder="例: 横浜市役所、地域メディア"
+                type="datetime-local"
+                required
+                value={formData.start_at}
+                onChange={(e) => setFormData({ ...formData, start_at: e.target.value })}
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                都道府県
-              </label>
-              <select
-                value={formData.prefecture}
-                onChange={(e) => setFormData({ ...formData, prefecture: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">都道府県を選択</option>
-                {prefectures.map((pref) => (
-                  <option key={pref} value={pref}>{pref}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                ステータス
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="draft">下書き</option>
-                <option value="published">公開</option>
-                <option value="archived">アーカイブ</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                タグ（カンマ区切り）
+                終了日時
               </label>
               <input
-                type="text"
-                value={formData.tags}
-                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                placeholder="例: 行政DX, シニア支援, 地域活性化"
+                type="datetime-local"
+                value={formData.end_at}
+                onChange={(e) => setFormData({ ...formData, end_at: e.target.value })}
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -324,10 +285,10 @@ export default function NewsAdminPage() {
         </div>
       )}
 
-      {/* ニュース一覧 */}
+      {/* イベント一覧 */}
       <div className="bg-white rounded-2xl shadow-lg border border-slate-200">
         <div className="px-6 py-4 border-b border-slate-200">
-          <h2 className="text-xl font-semibold text-slate-900">ニュース一覧</h2>
+          <h2 className="text-xl font-semibold text-slate-900">イベント一覧</h2>
         </div>
         
         <div className="overflow-x-auto">
@@ -341,19 +302,19 @@ export default function NewsAdminPage() {
                   タイトル
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  概要
+                  説明
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  出典
+                  会場
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  地域
+                  開始日時
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  終了日時
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   ステータス
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  タグ
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   操作
@@ -361,50 +322,40 @@ export default function NewsAdminPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-200">
-              {news.map((item) => {
-                const statusBadge = getStatusBadge(item.status)
+              {events.map((item) => {
+                const status = getEventStatus(item.start_at, item.end_at)
                 return (
                   <tr key={item.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                       {item.id}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                      {item.name || '-'}
+                      {item.title || '-'}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-900 max-w-xs">
-                      <div className="truncate" title={item.summary}>
-                        {item.summary || '-'}
+                      <div className="truncate" title={item.description}>
+                        {item.description || '-'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      {item.source_name || '-'}
+                      <div className="flex items-center gap-1">
+                        <MapPin className="w-4 h-4 text-slate-400" />
+                        {item.venue || '-'}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      {item.prefecture || '-'}
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4 text-slate-400" />
+                        {formatDateTime(item.start_at)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                      {item.end_at ? formatDateTime(item.end_at) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadge.color}`}>
-                        {statusBadge.text}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
+                        {status.text}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-900 max-w-xs">
-                      {Array.isArray(item.tags) && item.tags.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {item.tags.slice(0, 3).map((tag, index) => (
-                            <span
-                              key={index}
-                              className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                          {item.tags.length > 3 && (
-                            <span className="text-xs text-slate-500">+{item.tags.length - 3}</span>
-                          )}
-                        </div>
-                      ) : (
-                        '-'
-                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
@@ -431,11 +382,11 @@ export default function NewsAdminPage() {
           </table>
         </div>
         
-        {news.length === 0 && (
+        {events.length === 0 && (
           <div className="text-center py-12">
-            <Newspaper className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500 text-lg">地域ニュースはまだありません</p>
-            <p className="text-slate-400 text-sm mt-2">新しいニュース記事を追加してください</p>
+            <GraduationCap className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-500 text-lg">アカデミックサークルイベントはまだありません</p>
+            <p className="text-slate-400 text-sm mt-2">新しいイベントを追加してください</p>
           </div>
         )}
       </div>

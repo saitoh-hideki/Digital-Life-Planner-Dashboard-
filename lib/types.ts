@@ -73,6 +73,9 @@ export interface AcademicCircleEvent {
 
 export interface LocalMediaKnowledge {
   id?: number
+  region?: string
+  title?: string
+  description?: string
   url?: string
   file_name?: string
   created_at?: string
