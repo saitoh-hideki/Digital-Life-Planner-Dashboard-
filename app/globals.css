@@ -24,12 +24,13 @@ body {
 /* カスタムカードスタイル */
 .card-modern {
   @apply bg-white rounded-2xl shadow-sm border border-slate-100;
-  transition: all 0.2s ease-in-out;
+  transition: all 0.3s ease-in-out;
+  backdrop-filter: blur(10px);
 }
 
 .card-modern:hover {
-  @apply shadow-lg border-slate-200;
-  transform: translateY(-1px);
+  @apply shadow-xl border-slate-200;
+  transform: translateY(-2px);
 }
 
 /* カスタムボタンスタイル */
@@ -52,6 +53,11 @@ body {
 
 .badge-accent {
   @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800;
+}
+
+/* グラデーションボタン */
+.btn-gradient {
+  @apply inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5;
 }
 
 /* アニメーション */
@@ -99,6 +105,15 @@ body {
   }
 }
 
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
 .animate-slide-in {
   animation: slideIn 0.3s ease-out;
 }
@@ -113,6 +128,10 @@ body {
 
 .animate-scale-in {
   animation: scaleIn 0.3s ease-out;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
 }
 
 /* ホバーエフェクト */
@@ -138,6 +157,25 @@ body {
   background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* カードホバー効果 */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.15);
+}
+
+/* バッジホバー効果 */
+.badge-hover {
+  transition: all 0.2s ease-in-out;
+}
+
+.badge-hover:hover {
+  transform: scale(1.05);
 }
 
 .line-clamp-1 {

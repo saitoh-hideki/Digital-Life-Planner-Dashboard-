@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Topic, LocalApp, Subsidy, LocalNews, AcademicCircleEvent, LocalMediaKnowledge } from '@/lib/types'
 import DashboardCard from '@/components/dashboard/DashboardCard'
-import TopicItem from '@/components/dashboard/TopicItem'
+import TopicCarousel from '@/components/dashboard/TopicCarousel'
 import InfoItem from '@/components/dashboard/InfoItem'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { Search, MapPin, Globe } from 'lucide-react'
+import { Calendar, FileText, Archive, Settings, ChevronDown } from 'lucide-react'
+import Link from 'next/link'
 
 export default function DashboardPage() {
   const [topics, setTopics] = useState<Topic[]>([])
@@ -19,6 +20,7 @@ export default function DashboardPage() {
   const [knowledge, setKnowledge] = useState<LocalMediaKnowledge[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   useEffect(() => {
     fetchDashboardData()
@@ -34,7 +36,7 @@ export default function DashboardPage() {
         .select('*')
         .eq('is_today', true)
         .order('published_at', { ascending: false })
-        .limit(3)
+        .limit(10)
       
       if (topicsError) throw topicsError
       
@@ -100,9 +102,20 @@ export default function DashboardPage() {
     }
   }
 
+  const settingsMenuItems = [
+    { name: '本日のトピック', href: '/admin/topics', icon: '📰' },
+    { name: '補助金・助成金', href: '/admin/subsidies', icon: '💰' },
+    { name: '地域アプリ', href: '/admin/apps', icon: '📱' },
+    { name: '地域ニュース', href: '/admin/news', icon: '📝' },
+    { name: 'アカデミックサークル', href: '/admin/events', icon: '🎓' },
+    { name: '地域媒体ナレッジ', href: '/admin/knowledge', icon: '📖' },
+    { name: 'ニュースアーカイブ', href: '/admin/archive', icon: '📂' },
+    { name: 'Meeting', href: '/admin/meetings', icon: '🤝' }
+  ]
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-white">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <div className="text-slate-500">読み込み中...</div>
@@ -134,56 +147,46 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
-      {/* ヘッダー */}
-      <div className="bg-white border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-                Digital Life Planner
-              </h1>
-              <p className="text-lg text-blue-600 font-medium">
-                地域の情報をAIが整理・要約してお届け
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-lg border border-slate-200">
-                <MapPin className="w-4 h-4 text-slate-500" />
-                <span className="text-sm text-slate-700">東京都</span>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      {/* ヘッダー・ヒーロー */}
+      <div className="bg-white/80 backdrop-blur-sm border-b border-slate-100/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl text-white text-3xl shadow-lg">
+                  📰
+                </div>
+                <div className="relative">
+                  <h1 className="text-4xl font-bold text-slate-900 tracking-tight mb-2">
+                    Digital Life Planner
+                  </h1>
+                  <div className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full"></div>
+                </div>
               </div>
-              <button className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
-                <Search className="w-5 h-5" />
-              </button>
+              <p className="text-xl text-blue-600 font-medium">
+                Your Hub for Learning, Planning, and Acting
+              </p>
             </div>
           </div>
         </div>
       </div>
 
       {/* メインコンテンツ */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* 1段目：本日のトピック（フル幅） */}
-          <DashboardCard
-            title="本日のトピック"
-            icon="📰"
-            linkText="すべて見る"
-            linkHref="/archive"
-            fullWidth
-          >
-            {topics.length > 0 ? (
-              topics.map((topic) => (
-                <TopicItem key={topic.id} topic={topic} />
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 mx-auto mb-4 text-slate-300">
-                  <Globe className="w-full h-full" />
-                </div>
-                <p className="text-slate-500 text-sm">本日のトピックはまだありません</p>
-              </div>
-            )}
-          </DashboardCard>
+          {/* 1段目：本日のトピック（フル幅・カードスタイル） */}
+          <div className="col-span-full">
+            <DashboardCard
+              title="本日のトピック"
+              icon="📰"
+              linkText="すべて見る"
+              linkHref="/archive"
+              fullWidth
+            >
+              <TopicCarousel topics={topics} />
+            </DashboardCard>
+          </div>
 
           {/* 2段目：3カラム */}
           <DashboardCard
@@ -193,21 +196,24 @@ export default function DashboardPage() {
             linkHref="/search/subsidies"
           >
             {subsidies.length > 0 ? (
-              subsidies.map((subsidy) => (
-                <InfoItem
-                  key={subsidy.id}
-                  title={subsidy.name}
-                  description={subsidy.summary}
-                  metadata={[
-                    subsidy.audience || '',
-                    subsidy.apply_end ? `締切: ${format(new Date(subsidy.apply_end), 'MM/dd')}` : ''
-                  ].filter(Boolean)}
-                  badge={subsidy.status}
-                />
-              ))
+              <div className="space-y-4">
+                {subsidies.map((subsidy) => (
+                  <InfoItem
+                    key={subsidy.id}
+                    title={subsidy.name}
+                    description={subsidy.summary}
+                    metadata={[
+                      subsidy.audience || '',
+                      subsidy.apply_end ? `締切: ${format(new Date(subsidy.apply_end), 'MM/dd')}` : ''
+                    ].filter(Boolean)}
+                    badge={getSubsidyStatusBadge(subsidy.apply_end || null)}
+                    badgeColor={getSubsidyStatusColor(subsidy.apply_end || null)}
+                  />
+                ))}
+              </div>
             ) : (
-              <div className="text-center py-6">
-                <div className="w-12 h-12 mx-auto mb-3 text-slate-300">
+              <div className="text-center py-8">
+                <div className="w-16 h-16 mx-auto mb-4 text-slate-300">
                   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                   </svg>
@@ -224,20 +230,24 @@ export default function DashboardPage() {
             linkHref="/search/apps"
           >
             {localApps.length > 0 ? (
-              localApps.map((app) => (
-                <InfoItem
-                  key={app.id}
-                  title={app.name}
-                  description={app.summary}
-                  metadata={[
-                    app.platform || '',
-                    app.provider || ''
-                  ].filter(Boolean)}
-                />
-              ))
+              <div className="space-y-4">
+                {localApps.map((app) => (
+                  <InfoItem
+                    key={app.id}
+                    title={app.name}
+                    description={app.summary}
+                    metadata={[
+                      app.platform || '',
+                      app.provider || ''
+                    ].filter(Boolean)}
+                    badge={app.platform || 'アプリ'}
+                    badgeColor="blue"
+                  />
+                ))}
+              </div>
             ) : (
-              <div className="text-center py-6">
-                <div className="w-12 h-12 mx-auto mb-3 text-slate-300">
+              <div className="text-center py-8">
+                <div className="w-16 h-16 mx-auto mb-4 text-slate-300">
                   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
@@ -254,21 +264,24 @@ export default function DashboardPage() {
             linkHref="/search/news"
           >
             {localNews.length > 0 ? (
-              localNews.map((news) => (
-                <InfoItem
-                  key={news.id}
-                  title={news.name}
-                  description={news.summary}
-                  metadata={[
-                    news.source_name || '',
-                    news.prefecture
-                  ].filter(Boolean)}
-                  badge={news.tags?.[0]}
-                />
-              ))
+              <div className="space-y-4">
+                {localNews.map((news) => (
+                  <InfoItem
+                    key={news.id}
+                    title={news.name}
+                    description={news.summary}
+                    metadata={[
+                      news.source_name || '',
+                      news.prefecture
+                    ].filter(Boolean)}
+                    badge={news.tags?.[0] || 'ニュース'}
+                    badgeColor="purple"
+                  />
+                ))}
+              </div>
             ) : (
-              <div className="text-center py-6">
-                <div className="w-12 h-12 mx-auto mb-3 text-slate-300">
+              <div className="text-center py-8">
+                <div className="w-16 h-16 mx-auto mb-4 text-slate-300">
                   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
                   </svg>
@@ -286,24 +299,27 @@ export default function DashboardPage() {
             linkHref="/events"
           >
             {events.length > 0 ? (
-              events.map((event) => (
-                <InfoItem
-                  key={event.id}
-                  title={event.title}
-                  description={event.venue}
-                  metadata={[
-                    format(new Date(event.start_at), 'MM/dd HH:mm', { locale: ja })
-                  ]}
-                />
-              ))
+              <div className="space-y-4">
+                {events.map((event) => (
+                  <InfoItem
+                    key={event.id}
+                    title={event.title}
+                    description={event.venue}
+                    metadata={[
+                      format(new Date(event.start_at), 'MM/dd HH:mm', { locale: ja })
+                    ]}
+                    badge="イベント"
+                    badgeColor="green"
+                  />
+                ))}
+              </div>
             ) : (
-              <div className="text-center py-6">
-                <div className="w-12 h-12 mx-auto mb-3 text-slate-300">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
+              <div className="text-center py-8">
+                <div className="w-20 h-20 mx-auto mb-4 text-slate-300">
+                  <Calendar className="w-full h-full" />
                 </div>
-                <p className="text-slate-500 text-sm">イベント情報はまだありません</p>
+                <p className="text-slate-500 text-lg mb-2">イベント情報はまだありません</p>
+                <p className="text-slate-400 text-sm">新しいイベントが登録されると、ここに表示されます</p>
               </div>
             )}
           </DashboardCard>
@@ -315,24 +331,27 @@ export default function DashboardPage() {
             linkHref="/knowledge"
           >
             {knowledge.length > 0 ? (
-              knowledge.map((item) => (
-                <InfoItem
-                  key={item.id}
-                  title={item.file_name || `ファイル ${item.id}`}
-                  description={item.url && item.url !== 'EMPTY' ? item.url : 'ファイルがアップロードされていません'}
-                  metadata={[
-                    item.created_at ? format(new Date(item.created_at), 'yyyy/MM/dd') : ''
-                  ].filter(Boolean)}
-                />
-              ))
+              <div className="space-y-4">
+                {knowledge.map((item) => (
+                  <InfoItem
+                    key={item.id}
+                    title={item.file_name || `ファイル ${item.id}`}
+                    description={item.url && item.url !== 'EMPTY' ? item.url : 'ファイルがアップロードされていません'}
+                    metadata={[
+                      item.created_at ? format(new Date(item.created_at), 'yyyy/MM/dd') : ''
+                    ].filter(Boolean)}
+                    badge={getFileTypeBadge(item.file_name || null)}
+                    badgeColor="indigo"
+                  />
+                ))}
+              </div>
             ) : (
-              <div className="text-center py-6">
-                <div className="w-12 h-12 mx-auto mb-3 text-slate-300">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                  </svg>
+              <div className="text-center py-8">
+                <div className="w-20 h-20 mx-auto mb-4 text-slate-300">
+                  <FileText className="w-full h-full" />
                 </div>
-                <p className="text-slate-500 text-sm">ナレッジ情報はまだありません</p>
+                <p className="text-slate-500 text-lg mb-2">ナレッジ情報はまだありません</p>
+                <p className="text-slate-400 text-sm">PDFやレポートが登録されると、ここに表示されます</p>
               </div>
             )}
           </DashboardCard>
@@ -343,20 +362,120 @@ export default function DashboardPage() {
             linkText="すべて見る"
             linkHref="/archive"
           >
-            <div className="space-y-4">
-              <p className="text-slate-600 text-sm leading-relaxed">
-                過去30日間のトピックと地域ニュースを統合表示
-              </p>
-              <a
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <p className="text-slate-600 text-sm leading-relaxed">
+                  過去30日間のトピックと地域ニュースを統合表示
+                </p>
+                {topics.slice(0, 3).map((topic, index) => (
+                  <div key={index} className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                    <h4 className="font-medium text-slate-900 text-sm line-clamp-1 mb-1">
+                      {topic.headline}
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      {format(new Date(topic.published_at), 'MM/dd HH:mm', { locale: ja })} - {topic.source_name}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <Link
                 href="/archive"
-                className="btn-outline w-full justify-center"
+                className="inline-flex items-center justify-center w-full gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
+                <Archive className="w-4 h-4" />
                 アーカイブを見る
-              </a>
+              </Link>
             </div>
           </DashboardCard>
         </div>
       </div>
+
+      {/* 設定ボタン（画面右下固定） */}
+      <div className="fixed bottom-6 right-6 z-[9999]">
+        <div className="relative">
+          <button
+            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+            className="flex items-center justify-center w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300"
+            title="設定"
+          >
+            <Settings className="w-6 h-6" />
+          </button>
+          
+          {/* ドリルダウンメニュー */}
+          {isSettingsOpen && (
+            <>
+              {/* オーバーレイ */}
+              <div 
+                className="fixed inset-0 z-[9998]"
+                onClick={() => setIsSettingsOpen(false)}
+              />
+              
+              {/* メニュー */}
+              <div className="absolute bottom-full right-0 mb-3 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 py-3 z-[9999]">
+                <div className="px-4 py-2 border-b border-slate-100">
+                  <h3 className="text-sm font-semibold text-slate-900">管理メニュー</h3>
+                </div>
+                <div className="py-2">
+                  {settingsMenuItems.map((item) => (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className="flex items-center gap-3 px-4 py-3 text-slate-700 hover:bg-slate-50 transition-colors duration-200 group"
+                      onClick={() => setIsSettingsOpen(false)}
+                    >
+                      <span className="text-lg group-hover:scale-110 transition-transform duration-200">{item.icon}</span>
+                      <span className="text-sm font-medium group-hover:text-blue-600 transition-colors duration-200">{item.name}</span>
+                      <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   )
+}
+
+// ヘルパー関数
+function getSubsidyStatusBadge(endDate: string | null): string {
+  if (!endDate) return '情報なし'
+  const now = new Date()
+  const end = new Date(endDate)
+  const diffDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+  
+  if (diffDays < 0) return '終了'
+  if (diffDays <= 7) return '締切間近'
+  return '余裕あり'
+}
+
+function getSubsidyStatusColor(endDate: string | null): string {
+  if (!endDate) return 'gray'
+  const now = new Date()
+  const end = new Date(endDate)
+  const diffDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+  
+  if (diffDays < 0) return 'gray'
+  if (diffDays <= 7) return 'orange'
+  return 'green'
+}
+
+function getFileTypeBadge(fileName: string | null): string {
+  if (!fileName) return 'File'
+  const ext = fileName.split('.').pop()?.toLowerCase()
+  switch (ext) {
+    case 'pdf': return 'PDF'
+    case 'doc':
+    case 'docx': return 'Document'
+    case 'xls':
+    case 'xlsx': return 'Spreadsheet'
+    case 'ppt':
+    case 'pptx': return 'Presentation'
+    default: return 'File'
+  }
 }

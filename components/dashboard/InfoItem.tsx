@@ -5,11 +5,30 @@ interface InfoItemProps {
   description?: string
   metadata?: string[]
   badge?: string
+  badgeColor?: string
 }
 
-export default function InfoItem({ title, description, metadata, badge }: InfoItemProps) {
+export default function InfoItem({ title, description, metadata, badge, badgeColor = 'blue' }: InfoItemProps) {
+  const getBadgeClasses = (color: string) => {
+    switch (color) {
+      case 'green':
+        return 'bg-green-100 text-green-800 border-green-200'
+      case 'orange':
+        return 'bg-orange-100 text-orange-800 border-orange-200'
+      case 'purple':
+        return 'bg-purple-100 text-purple-800 border-purple-200'
+      case 'indigo':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-200'
+      case 'gray':
+        return 'bg-gray-100 text-gray-800 border-gray-200'
+      case 'blue':
+      default:
+        return 'bg-blue-100 text-blue-800 border-blue-200'
+    }
+  }
+
   return (
-    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-slate-200 transition-all duration-200">
+    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-slate-200 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -38,7 +57,7 @@ export default function InfoItem({ title, description, metadata, badge }: InfoIt
           </div>
           
           {badge && (
-            <span className="badge-secondary">
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getBadgeClasses(badgeColor)}`}>
               <Tag className="w-3 h-3 mr-1" />
               {badge}
             </span>

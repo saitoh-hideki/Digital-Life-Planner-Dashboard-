@@ -22,10 +22,10 @@ export default function DashboardCard({
   fullWidth = false
 }: DashboardCardProps) {
   return (
-    <div className={`card-modern p-6 ${fullWidth ? 'col-span-full' : ''}`}>
+    <div className={`card-modern p-6 hover:shadow-xl transition-all duration-300 ${fullWidth ? 'col-span-full' : ''}`}>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 bg-slate-50 rounded-xl text-xl">
+          <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl text-2xl border border-blue-100">
             {icon}
           </div>
           <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
@@ -33,17 +33,17 @@ export default function DashboardCard({
         {linkText && linkHref && (
           <Link
             href={linkHref}
-            className="btn-outline text-xs py-1.5 px-3"
+            className="inline-flex items-center gap-2 px-4 py-2 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-all duration-200 group"
           >
             {linkText.includes('検索') ? (
               <>
-                <Search className="w-3 h-3" />
+                <Search className="w-4 h-4" />
                 {linkText}
               </>
             ) : (
               <>
                 {linkText}
-                <ArrowRight className="w-3 h-3" />
+                <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
               </>
             )}
           </Link>
