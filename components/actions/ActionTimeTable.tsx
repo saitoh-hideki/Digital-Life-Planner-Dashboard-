@@ -8,7 +8,7 @@ import { getCategoryConfig } from '@/lib/actionCategories'
 
 interface ActionTimeTableProps {
   tasks: ActionTask[]
-  onTimeSlotClick: () => void
+  onTimeSlotClick: (time: string) => void
   onTaskClick: (task: ActionTask) => void
   onTaskComplete: (taskId: string) => void
   onTaskDelete: (taskId: string) => void
@@ -36,7 +36,15 @@ export default function ActionTimeTable({
   const getTasksForTimeSlot = (time: string) => {
     return tasks.filter(task => {
       const taskStart = format(parseISO(task.start_time), 'HH:mm')
-      return taskStart === time
+      const taskEnd = format(parseISO(task.end_time), 'HH:mm')
+      
+      // 時間スロットがタスクの時間範囲内にあるかチェック
+      const timeSlot = time
+      const startTime = taskStart
+      const endTime = taskEnd
+      
+      // タスクがその時間スロットに含まれる場合
+      return timeSlot >= startTime && timeSlot < endTime
     })
   }
 
@@ -100,7 +108,7 @@ export default function ActionTimeTable({
                   {timeSlotTasks.length === 0 ? (
                     // 空のスロット
                     <button
-                      onClick={onTimeSlotClick}
+                      onClick={() => onTimeSlotClick(time)}
                       className="w-full h-full flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg border-2 border-dashed border-gray-200 hover:border-blue-300 transition-all group"
                     >
                       <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />

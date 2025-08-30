@@ -16,6 +16,7 @@ export default function ActionsPage() {
   const [tasks, setTasks] = useState<ActionTask[]>([])
   const [selectedTask, setSelectedTask] = useState<ActionTask | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [selectedTime, setSelectedTime] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [dailySummary, setDailySummary] = useState<DailySummary | null>(null)
@@ -195,8 +196,9 @@ export default function ActionsPage() {
     setShowConfetti(true)
   }
 
-  const handleTimeSlotClick = () => {
-    setSelectedTask(null)
+  const handleTimeSlotClick = (time: string) => {
+    setSelectedTime(time)
+    setSelectedTask(null) // タスクを選択解除
     setIsFormOpen(true)
   }
 
@@ -291,10 +293,12 @@ export default function ActionsPage() {
             onClose={() => {
               setIsFormOpen(false)
               setSelectedTask(null)
+              setSelectedTime('') // フォームを閉じるときに選択時間をリセット
             }}
             onSubmit={handleTaskCreate}
             onUpdate={handleTaskUpdate}
             task={selectedTask}
+            selectedTime={selectedTime}
           />
         </div>
       </div>

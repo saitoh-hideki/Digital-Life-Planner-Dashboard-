@@ -12,6 +12,7 @@ interface ActionFormProps {
   onSubmit: (taskData: Omit<ActionTask, 'id' | 'created_at' | 'updated_at'>) => void
   onUpdate: (taskId: string, updates: Partial<ActionTask>) => void
   task: ActionTask | null
+  selectedTime?: string // 選択された時間スロット
 }
 
 export default function ActionForm({
@@ -19,7 +20,8 @@ export default function ActionForm({
   onClose,
   onSubmit,
   onUpdate,
-  task
+  task,
+  selectedTime
 }: ActionFormProps) {
   const [formData, setFormData] = useState({
     title: '',
@@ -45,27 +47,37 @@ export default function ActionForm({
     } else {
       // 新規作成モード
       const now = new Date()
-      const currentTime = format(now, 'HH:mm')
-      const nextTime = format(new Date(now.getTime() + 30 * 60 * 1000), 'HH:mm')
+      let currentTime = ''
+      let nextHour = ''
+      
+      if (selectedTime) {
+        // 選択された時間スロットがある場合
+        currentTime = selectedTime
+        // 選択された時間から30分後を計算
+        const [hours, minutes] = selectedTime.split(':').map(Number)
+        const selectedDateTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes)
+        const nextHalfHourDateTime = new Date(selectedDateTime.getTime() + 30 * 60 * 1000)
+        nextHour = format(nextHalfHourDateTime, 'HH:mm')
+      } else {
+        // 現在時刻を使用
+        currentTime = format(now, 'HH:mm')
+        nextHour = format(new Date(now.getTime() + 30 * 60 * 1000), 'HH:mm')
+      }
       
       setFormData({
         title: '',
         memo: '',
         category: 'meeting',
         start_time: currentTime,
-        end_time: nextTime,
+        end_time: nextHour,
         priority: 'medium'
       })
     }
     setErrors({})
-  }, [task])
+  }, [task, selectedTime]) // selectedTimeを依存配列に戻す
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
-
-    if (!formData.title.trim()) {
-      newErrors.title = 'タイトルを入力してください'
-    }
 
     if (!formData.start_time) {
       newErrors.start_time = '開始時刻を選択してください'
@@ -97,12 +109,22 @@ export default function ActionForm({
 
     try {
       const today = format(new Date(), 'yyyy-MM-dd')
+      
+      // 時間の処理を修正
+      const startDateTime = new Date(`${today}T${formData.start_time}:00`)
+      const endDateTime = new Date(`${today}T${formData.end_time}:00`)
+      
+      // 終了時刻が開始時刻より前の場合は、次の日に設定
+      if (endDateTime <= startDateTime) {
+        endDateTime.setDate(endDateTime.getDate() + 1)
+      }
+      
       const taskData = {
-        title: formData.title.trim(),
+        title: ACTION_CATEGORIES.find(cat => cat.key === formData.category)?.label || formData.category,
         memo: formData.memo.trim() || undefined,
         category: formData.category,
-        start_time: `${today}T${formData.start_time}:00`,
-        end_time: `${today}T${formData.end_time}:00`,
+        start_time: startDateTime.toISOString(),
+        end_time: endDateTime.toISOString(),
         priority: formData.priority,
         is_completed: false
       }
@@ -152,11 +174,11 @@ export default function ActionForm({
 
       {/* フォーム */}
       <form onSubmit={handleSubmit} className="p-6 space-y-6">
-        {/* カテゴリ選択 */}
+        {/* カテゴリ選択（タイトルとして使用） */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
             <Tag className="w-4 h-4 text-blue-600" />
-            カテゴリ
+            タスクタイトル（カテゴリ）*
           </label>
           <select
             value={formData.category}
@@ -169,25 +191,9 @@ export default function ActionForm({
               </option>
             ))}
           </select>
-        </div>
-
-        {/* タイトル */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            タイトル *
-          </label>
-          <input
-            type="text"
-            value={formData.title}
-            onChange={(e) => handleInputChange('title', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-              errors.title ? 'border-red-300' : 'border-gray-300'
-            }`}
-            placeholder="タスクのタイトルを入力"
-          />
-          {errors.title && (
-            <p className="mt-1 text-sm text-red-600">{errors.title}</p>
-          )}
+          <p className="mt-1 text-sm text-gray-500">
+            選択したカテゴリがタスクのタイトルになります
+          </p>
         </div>
 
         {/* メモ */}
