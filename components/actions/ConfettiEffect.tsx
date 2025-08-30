@@ -10,15 +10,13 @@ interface ConfettiEffectProps {
 }
 
 type ParticleType = 'confetti' | 'star' | 'trophy' | 'heart' | 'zap' | 'sparkles' | 'award' | 'crown' | 'firework' | 'lightning' | 'rainbow'
-type PatternType = 'normal' | 'spiral' | 'explosion' | 'rain' | 'starfield'
 
 interface Supporter {
   id: string
   name: string
   avatar: string
-  messages: string[]
-  color: string
   customName?: string
+  color: string
 }
 
 export default function ConfettiEffect({ isActive, onComplete, selectedSupporter }: ConfettiEffectProps) {
@@ -33,99 +31,48 @@ export default function ConfettiEffect({ isActive, onComplete, selectedSupporter
     color: string
     type: ParticleType
     scale: number
-    trail: Array<{x: number, y: number, opacity: number}>
     neon: boolean
   }>>([])
   
   const [currentMessage, setCurrentMessage] = useState<string>('')
-  const [currentPattern, setCurrentPattern] = useState<PatternType>('normal')
   const [currentSupporter, setCurrentSupporter] = useState<Supporter | null>(null)
   const [showFlash, setShowFlash] = useState(false)
 
-  // 応援者の定義（30個ずつのメッセージ）
-  const supporters: Supporter[] = [
-    {
-      id: 'family',
-      name: '家族',
-      avatar: '👨‍👩‍👧‍👦',
-      color: '#FF6B9D',
-      messages: [
-        "今日の仕事ぶりは成長を感じるな！確実にステップアップしてるぞ！",
-        "ミーティングよく頑張ったな！リーダーシップが光ってたぞ！",
-        "この成果は素晴らしい！君の努力が実を結んでる！",
-        "毎日着実に成長してるな！家族の誇りだぞ！",
-        "今日のタスク完了は完璧だ！君の集中力がすごい！",
-        "この仕事ぶりを見てると、君の成長が手に取るように分かる！",
-        "ミーティングでの発言、とても良かった！自信を持って話してた！",
-        "今日も頑張ったな！君の粘り強さが光ってる！",
-        "この成果は君の実力の証明だ！着実に成長してるぞ！",
-        "毎日の積み重ねが実を結んでる！君の努力は無駄になってない！",
-        "今日の仕事は素晴らしかった！君の成長が目に見える！",
-        "ミーティングでの進行、とても上手だった！リーダーシップが光ってる！",
-        "このタスク完了は完璧だ！君の集中力と実行力がすごい！",
-        "毎日着実に進歩してるな！君の成長は止まらない！",
-        "今日の成果は君の実力の証だ！確実にステップアップしてる！",
-        "この仕事ぶりを見てると、君の将来が楽しみになる！",
-        "ミーティングでの意見、とても的確だった！成長を感じる！",
-        "今日も頑張ったな！君の努力は必ず報われる！",
-        "この成果は君の実力の証明だ！着実に成長してるぞ！",
-        "毎日の積み重ねが実を結んでる！君の努力は無駄になってない！",
-        "今日の仕事は素晴らしかった！君の成長が目に見える！",
-        "ミーティングでの進行、とても上手だった！リーダーシップが光ってる！",
-        "このタスク完了は完璧だ！君の集中力と実行力がすごい！",
-        "毎日着実に進歩してるな！君の成長は止まらない！",
-        "今日の成果は君の実力の証だ！確実にステップアップしてる！",
-        "この仕事ぶりを見てると、君の将来が楽しみになる！",
-        "ミーティングでの意見、とても的確だった！成長を感じる！",
-        "今日も頑張ったな！君の努力は必ず報われる！",
-        "この成果は君の実力の証明だ！着実に成長してるぞ！",
-        "毎日の積み重ねが実を結んでる！君の努力は無駄になってない！",
-        "今日の仕事は素晴らしかった！君の成長が目に見える！"
-      ]
-    },
-    {
-      id: 'friend',
-      name: '友達',
-      avatar: '👥',
-      color: '#4ECDC4',
-      messages: [
-        "今日の仕事ぶりは成長を感じるな！確実にステップアップしてるぞ！",
-        "ミーティングよく頑張ったな！リーダーシップが光ってたぞ！",
-        "この成果は素晴らしい！君の努力が実を結んでる！",
-        "毎日着実に成長してるな！友達として誇りだぞ！",
-        "今日のタスク完了は完璧だ！君の集中力がすごい！",
-        "この仕事ぶりを見てると、君の成長が手に取るように分かる！",
-        "ミーティングでの発言、とても良かった！自信を持って話してた！",
-        "今日も頑張ったな！君の粘り強さが光ってる！",
-        "この成果は君の実力の証明だ！着実に成長してるぞ！",
-        "毎日の積み重ねが実を結んでる！君の努力は無駄になってない！",
-        "今日の仕事は素晴らしかった！君の成長が目に見える！",
-        "ミーティングでの進行、とても上手だった！リーダーシップが光ってる！",
-        "このタスク完了は完璧だ！君の集中力と実行力がすごい！",
-        "毎日着実に進歩してるな！君の成長は止まらない！",
-        "今日の成果は君の実力の証だ！確実にステップアップしてる！",
-        "この仕事ぶりを見てると、君の将来が楽しみになる！",
-        "ミーティングでの意見、とても的確だった！成長を感じる！",
-        "今日も頑張ったな！君の努力は必ず報われる！",
-        "この成果は君の実力の証明だ！着実に成長してるぞ！",
-        "毎日の積み重ねが実を結んでる！君の努力は無駄になってない！",
-        "今日の仕事は素晴らしかった！君の成長が目に見える！",
-        "ミーティングでの進行、とても上手だった！リーダーシップが光ってる！",
-        "このタスク完了は完璧だ！君の集中力と実行力がすごい！",
-        "毎日着実に進歩してるな！君の成長は止まらない！",
-        "今日の成果は君の実力の証だ！確実にステップアップしてる！",
-        "この仕事ぶりを見てると、君の将来が楽しみになる！",
-        "ミーティングでの意見、とても的確だった！成長を感じる！",
-        "今日も頑張ったな！君の努力は必ず報われる！",
-        "この成果は君の実力の証明だ！着実に成長してるぞ！",
-        "毎日の積み重ねが実を結んでる！君の努力は無駄になってない！",
-        "今日の仕事は素晴らしかった！君の成長が目に見える！"
-      ]
-    }
+  // 応援メッセージの配列
+  const messages = [
+    "今日の仕事ぶりは成長を感じるな！確実にステップアップしてるぞ！",
+    "ミーティングよく頑張ったな！リーダーシップが光ってたぞ！",
+    "この成果は素晴らしい！君の努力が実を結んでる！",
+    "毎日着実に成長してるな！君の成長が止まらない！",
+    "今日のタスク完了は完璧だ！君の集中力がすごい！",
+    "この仕事ぶりを見てると、君の成長が手に取るように分かる！",
+    "ミーティングでの発言、とても良かった！自信を持って話してた！",
+    "今日も頑張ったな！君の粘り強さが光ってる！",
+    "この成果は君の実力の証明だ！着実に成長してるぞ！",
+    "毎日の積み重ねが実を結んでる！君の努力は無駄になってない！",
+    "今日の仕事は素晴らしかった！君の成長が目に見える！",
+    "ミーティングでの進行、とても上手だった！リーダーシップが光ってる！",
+    "このタスク完了は完璧だ！君の集中力と実行力がすごい！",
+    "今日の成果は君の実力の証だ！確実にステップアップしてる！",
+    "この仕事ぶりを見てると、君の将来が楽しみになる！",
+    "ミーティングでの意見、とても的確だった！成長を感じる！",
+    "今日も頑張ったな！君の努力は必ず報われる！",
+    "この成果は君の実力の証明だ！着実に成長してるぞ！",
+    "毎日の積み重ねが実を結んでる！君の努力は無駄になってない！",
+    "今日の仕事は素晴らしかった！君の成長が目に見える！",
+    "ミーティングでの進行、とても上手だった！リーダーシップが光ってる！",
+    "このタスク完了は完璧だ！君の集中力と実行力がすごい！",
+    "今日の成果は君の実力の証だ！確実にステップアップしてる！",
+    "この仕事ぶりを見てると、君の将来が楽しみになる！",
+    "ミーティングでの意見、とても的確だった！成長を感じる！",
+    "今日も頑張ったな！君の努力は必ず報われる！",
+    "この成果は君の実力の証明だ！着実に成長してるぞ！",
+    "毎日の積み重ねが実を結んでる！君の努力は無駄になってない！",
+    "今日の仕事は素晴らしかった！君の成長が目に見える！"
   ]
 
-  // パーティクル生成関数（500個、巨大パーティクル、特殊パーティクル含む）
-  const generateParticles = (pattern: PatternType) => {
+  // パーティクル生成関数（300個に削減）
+  const generateParticles = () => {
     const newParticles: Array<{
       id: number
       x: number
@@ -137,106 +84,45 @@ export default function ConfettiEffect({ isActive, onComplete, selectedSupporter
       color: string
       type: ParticleType
       scale: number
-      trail: Array<{x: number, y: number, opacity: number}>
       neon: boolean
     }> = []
     
     const colors = [
       '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8',
-      '#FF8E53', '#FF6B9D', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD',
-      '#98D8C8', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'
+      '#FF8E53', '#FF6B9D', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'
     ]
 
-    switch (pattern) {
-      case 'normal':
-        // 通常パターン：500個のパーティクル
-        for (let i = 0; i < 500; i++) {
-          const isGiant = Math.random() < 0.1 // 10%の確率で巨大パーティクル
-          const isSpecial = Math.random() < 0.15 // 15%の確率で特殊パーティクル
-          const hasNeon = Math.random() < 0.2 // 20%の確率でネオン効果
-          
-          let randomType: ParticleType
-          if (isSpecial) {
-            randomType = Math.random() > 0.5 ? 'firework' : 'lightning'
-          } else {
-            randomType = Math.random() > 0.6 ? 
-              (Math.random() > 0.7 ? 'star' : 'trophy') : 
-              (Math.random() > 0.5 ? 'heart' : 
-               Math.random() > 0.6 ? 'zap' : 
-               Math.random() > 0.7 ? 'sparkles' : 
-               Math.random() > 0.8 ? 'award' : 'crown')
-          }
-          
-          newParticles.push({
-            id: i,
-            x: Math.random() * window.innerWidth,
-            y: -20,
-            vx: (Math.random() - 0.5) * 15,
-            vy: Math.random() * 6 + 4,
-            rotation: Math.random() * 360,
-            rotationSpeed: (Math.random() - 0.5) * 20,
-            color: colors[Math.floor(Math.random() * colors.length)],
-            type: randomType,
-            scale: isGiant ? Math.random() * 2 + 2 : Math.random() * 0.8 + 0.6,
-            trail: [],
-            neon: hasNeon
-          })
-        }
-        break
-
-      case 'explosion':
-        // 爆発パターン：500個のパーティクル
-        for (let i = 0; i < 500; i++) {
-          const angle = (i / 500) * Math.PI * 2
-          const speed = Math.random() * 20 + 15
-          const isGiant = Math.random() < 0.15
-          const hasNeon = Math.random() < 0.25
-          
-          let randomType: ParticleType
-          if (Math.random() < 0.2) {
-            randomType = 'firework'
-          } else {
-            randomType = Math.random() > 0.6 ? 'zap' : 'sparkles'
-          }
-          
-          newParticles.push({
-            id: i,
-            x: window.innerWidth / 2,
-            y: window.innerHeight / 2,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            rotation: Math.random() * 360,
-            rotationSpeed: (Math.random() - 0.5) * 30,
-            color: colors[Math.floor(Math.random() * colors.length)],
-            type: randomType,
-            scale: isGiant ? Math.random() * 2.5 + 2 : Math.random() * 1.2 + 0.8,
-            trail: [],
-            neon: hasNeon
-          })
-        }
-        break
-
-      default:
-        // その他のパターンも同様に500個
-        for (let i = 0; i < 500; i++) {
-          const isGiant = Math.random() < 0.1
-          const hasNeon = Math.random() < 0.2
-          
-          newParticles.push({
-            id: i,
-            x: Math.random() * window.innerWidth,
-            y: -20,
-            vx: (Math.random() - 0.5) * 12,
-            vy: Math.random() * 4 + 3,
-            rotation: Math.random() * 360,
-            rotationSpeed: (Math.random() - 0.5) * 15,
-            color: colors[Math.floor(Math.random() * colors.length)],
-            type: 'star',
-            scale: isGiant ? Math.random() * 2 + 1.5 : Math.random() * 0.6 + 0.8,
-            trail: [],
-            neon: hasNeon
-          })
-        }
+    // 300個のパーティクルを生成
+    for (let i = 0; i < 300; i++) {
+      const isGiant = Math.random() < 0.1 // 10%の確率で巨大パーティクル
+      const isSpecial = Math.random() < 0.15 // 15%の確率で特殊パーティクル
+      const hasNeon = Math.random() < 0.2 // 20%の確率でネオン効果
+      
+      let randomType: ParticleType
+      if (isSpecial) {
+        randomType = Math.random() > 0.5 ? 'firework' : 'lightning'
+      } else {
+        randomType = Math.random() > 0.6 ? 
+          (Math.random() > 0.7 ? 'star' : 'trophy') : 
+          (Math.random() > 0.5 ? 'heart' : 
+           Math.random() > 0.6 ? 'zap' : 
+           Math.random() > 0.7 ? 'sparkles' : 
+           Math.random() > 0.8 ? 'award' : 'crown')
+      }
+      
+      newParticles.push({
+        id: i,
+        x: Math.random() * window.innerWidth,
+        y: -20,
+        vx: (Math.random() - 0.5) * 15,
+        vy: Math.random() * 6 + 4,
+        rotation: Math.random() * 360,
+        rotationSpeed: (Math.random() - 0.5) * 20,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        type: randomType,
+        scale: isGiant ? Math.random() * 2 + 2 : Math.random() * 0.8 + 0.6,
+        neon: hasNeon
+      })
     }
     
     return newParticles
@@ -249,30 +135,31 @@ export default function ConfettiEffect({ isActive, onComplete, selectedSupporter
     setShowFlash(true)
     setTimeout(() => setShowFlash(false), 300)
 
-    // 応援者とパターンを選択
-    let chosenSupporter: Supporter
+    // 応援者とメッセージを設定
     if (selectedSupporter) {
-      chosenSupporter = Math.random() < 0.7 ? selectedSupporter : supporters[Math.floor(Math.random() * supporters.length)]
+      setCurrentSupporter(selectedSupporter)
     } else {
-      chosenSupporter = supporters[Math.floor(Math.random() * supporters.length)]
+      // デフォルトの応援者
+      setCurrentSupporter({
+        id: 'supporter',
+        name: '応援者',
+        avatar: '👨‍👩‍👧‍👦',
+        customName: '',
+        color: '#FF6B9D'
+      })
     }
     
-    const randomMessage = chosenSupporter.messages[Math.floor(Math.random() * chosenSupporter.messages.length)]
-    const patterns: PatternType[] = ['normal', 'spiral', 'explosion', 'rain', 'starfield']
-    const randomPattern = patterns[Math.floor(Math.random() * patterns.length)]
-    
-    setCurrentSupporter(chosenSupporter)
+    const randomMessage = messages[Math.floor(Math.random() * messages.length)]
     setCurrentMessage(randomMessage)
-    setCurrentPattern(randomPattern)
 
-    // 500個のパーティクルを生成
-    const newParticles = generateParticles(randomPattern)
+    // 300個のパーティクルを生成
+    const newParticles = generateParticles()
     setParticles(newParticles)
 
-    // アニメーション時間を延長（6秒）
+    // アニメーション時間を5秒に設定
     const timer = setTimeout(() => {
       onComplete()
-    }, 6000)
+    }, 5000)
 
     return () => clearTimeout(timer)
   }, [isActive, onComplete, selectedSupporter])
@@ -283,24 +170,12 @@ export default function ConfettiEffect({ isActive, onComplete, selectedSupporter
     const animate = () => {
       setParticles(prev => 
         prev.map(particle => {
-          // 軌跡を更新
-          const newTrail = [...particle.trail, {x: particle.x, y: particle.y, opacity: 1}]
-          if (newTrail.length > 10) newTrail.shift()
-          
           // パーティクルの動きを更新
           let newVx = particle.vx
           let newVy = particle.vy
           
-          // パターン別の特別な動き
-          switch (currentPattern) {
-            case 'explosion':
-              newVx = particle.vx * 0.95
-              newVy = particle.vy * 0.95
-              break
-            case 'rain':
-              newVy = particle.vy + 0.3
-              break
-          }
+          // 重力効果
+          newVy = particle.vy + 0.3
           
           return {
             ...particle,
@@ -308,8 +183,7 @@ export default function ConfettiEffect({ isActive, onComplete, selectedSupporter
             y: particle.y + newVy,
             rotation: particle.rotation + particle.rotationSpeed,
             vx: newVx,
-            vy: newVy,
-            trail: newTrail.map(t => ({...t, opacity: t.opacity * 0.9}))
+            vy: newVy
           }
         })
       )
@@ -317,7 +191,7 @@ export default function ConfettiEffect({ isActive, onComplete, selectedSupporter
 
     const interval = setInterval(animate, 16)
     return () => clearInterval(interval)
-  }, [isActive, particles, currentPattern])
+  }, [isActive, particles])
 
   if (!isActive) return null
 
@@ -331,21 +205,6 @@ export default function ConfettiEffect({ isActive, onComplete, selectedSupporter
       {/* パーティクル */}
       {particles.map(particle => (
         <div key={particle.id}>
-          {/* 軌跡効果 */}
-          {particle.trail.map((trail, index) => (
-            <div
-              key={`${particle.id}-trail-${index}`}
-              className="absolute w-1 h-1 rounded-full"
-              style={{
-                left: trail.x,
-                top: trail.y,
-                backgroundColor: particle.color,
-                opacity: trail.opacity * 0.6,
-                transform: `scale(${particle.scale * 0.3})`
-              }}
-            />
-          ))}
-          
           {/* メインパーティクル */}
           <div
             className="absolute"

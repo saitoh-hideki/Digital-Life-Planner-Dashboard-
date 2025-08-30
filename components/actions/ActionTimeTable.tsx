@@ -162,9 +162,9 @@ export default function ActionTimeTable({
         </p>
       </div>
 
-      {/* 時間テーブル */}
+      {/* 時間テーブル - スクロール可能なコンテナ */}
       <div className="overflow-x-auto">
-        <div className="min-w-full">
+        <div className="min-w-full max-h-[70vh] overflow-y-auto">
           {timeSlots.map((time) => {
             const { startingTasks, continuingTasks } = getTaskDisplay(time)
             const isCurrent = isCurrentTime(time)

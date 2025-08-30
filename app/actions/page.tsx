@@ -13,14 +13,13 @@ import MonthlySummaryCard from '@/components/actions/MonthlySummaryCard'
 import ConfettiEffect from '@/components/actions/ConfettiEffect'
 import SupporterSelector from '@/components/actions/SupporterSelector'
 
-// 応援者の型定義（SupporterSelectorと一致）
+// 応援者の型定義（簡素化）
 interface Supporter {
   id: string
   name: string
   avatar: string
-  messages: string[]
-  color: string
   customName: string
+  color: string
 }
 
 export default function ActionsPage() {
