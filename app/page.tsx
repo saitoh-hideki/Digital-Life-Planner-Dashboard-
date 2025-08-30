@@ -6,10 +6,9 @@ import { Topic, LocalApp, Subsidy, LocalNews, AcademicCircleEvent, LocalMediaKno
 import DashboardCard from '@/components/dashboard/DashboardCard'
 import TopicCarousel from '@/components/dashboard/TopicCarousel'
 import InfoItem from '@/components/dashboard/InfoItem'
-import AlertsButton from '@/components/dashboard/AlertsButton'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { Calendar, FileText, Archive, Settings, ChevronDown } from 'lucide-react'
+import { Calendar, FileText, Archive, Settings } from 'lucide-react'
 import Link from 'next/link'
 
 export default function DashboardPage() {
@@ -163,7 +162,6 @@ export default function DashboardPage() {
               Your Hub for Learning, Planning, and Acting
             </p>
           </div>
-          <AlertsButton />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -505,21 +503,6 @@ function getSubsidyStatusColor(endDate: string | null): string {
   if (diffDays < 0) return 'gray'
   if (diffDays <= 7) return 'orange'
   return 'green'
-}
-
-function getFileTypeBadge(fileName: string | null): string {
-  if (!fileName) return 'File'
-  const ext = fileName.split('.').pop()?.toLowerCase()
-  switch (ext) {
-    case 'pdf': return 'PDF'
-    case 'doc':
-    case 'docx': return 'Document'
-    case 'xls':
-    case 'xlsx': return 'Spreadsheet'
-    case 'ppt':
-    case 'pptx': return 'Presentation'
-    default: return 'File'
-  }
 }
 
 function getFileTypeBackground(fileName: string | null): string {

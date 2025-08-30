@@ -126,3 +126,61 @@ export interface SearchResult {
   tags?: string[]
   metadata?: Record<string, string | number | boolean | null>
 }
+
+// Actions（アクションズ）機能用の型定義
+export interface ActionTask {
+  id: string
+  title: string
+  memo?: string
+  category: ActionCategory
+  start_time: string // HH:mm形式
+  end_time: string // HH:mm形式
+  priority: 'high' | 'medium' | 'low'
+  is_completed: boolean
+  completed_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export type ActionCategory = 
+  | 'discussion'
+  | 'round'
+  | 'fas_preparation'
+  | 'appointment'
+  | 'clinic_related'
+  | 'media_promotion'
+  | 'meeting'
+  | 'roleplay'
+  | 'documentation'
+  | 'interview'
+  | 'academic_circle'
+  | 'ao_school_lecturer'
+  | 'facility_preparation'
+  | 'layout_change'
+  | 'skill_learning'
+  | 'other'
+
+export interface ActionCategoryConfig {
+  key: ActionCategory
+  label: string
+  color: string
+  bgColor: string
+  borderColor: string
+}
+
+export interface DailySummary {
+  date: string
+  completed_count: number
+  total_count: number
+  completion_rate: number
+  total_work_hours: number
+}
+
+export interface MonthlySummary {
+  year: number
+  month: number
+  category_hours: Record<ActionCategory, number>
+  total_hours: number
+  daily_average: number
+  completed_count: number
+}

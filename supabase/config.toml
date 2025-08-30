@@ -16,9 +16,9 @@ max_rows = 1000
 
 [db]
 # Port to use for the local database URL.
-port = 54322
+port = 54325
 # Port used by db diff command to initialize the shadow database.
-shadow_port = 54320
+shadow_port = 54326
 # The database major version to use. This has to be the same as your remote database's. Run `SHOW server_version;` on the remote database to check.
 major_version = 15
 
@@ -40,7 +40,7 @@ enabled = true
 [studio]
 enabled = true
 # Port to use for Supabase Studio.
-port = 54323
+port = 54327
 # External URL of the API server that frontend connects to.
 api_url = "http://127.0.0.1:54321"
 
@@ -49,7 +49,7 @@ api_url = "http://127.0.0.1:54321"
 [inbucket]
 enabled = true
 # Port to use for the email testing server web interface.
-port = 54324
+port = 54328
 # Uncomment to expose additional ports for testing user applications that send emails.
 # smtp_port = 2500
 # pop3_port = 1100
