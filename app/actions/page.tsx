@@ -4,13 +4,24 @@ import { useState, useEffect, useCallback } from 'react'
 import { ActionTask, ActionCategory, DailySummary, MonthlySummary } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns'
-import { Calendar, Plus, ArrowLeft, Home } from 'lucide-react'
+import { Calendar, Plus, ArrowLeft, Home, Heart } from 'lucide-react'
 import Link from 'next/link'
 import ActionTimeTable from '@/components/actions/ActionTimeTable'
 import ActionForm from '@/components/actions/ActionForm'
 import DailySummaryCard from '@/components/actions/DailySummaryCard'
 import MonthlySummaryCard from '@/components/actions/MonthlySummaryCard'
 import ConfettiEffect from '@/components/actions/ConfettiEffect'
+import SupporterSelector from '@/components/actions/SupporterSelector'
+
+// 応援者の型定義（SupporterSelectorと一致）
+interface Supporter {
+  id: string
+  name: string
+  avatar: string
+  messages: string[]
+  color: string
+  customName: string
+}
 
 export default function ActionsPage() {
   const [tasks, setTasks] = useState<ActionTask[]>([])
@@ -23,17 +34,38 @@ export default function ActionsPage() {
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary | null>(null)
   const [currentDate] = useState(new Date())
   const [showConfetti, setShowConfetti] = useState(false)
+  const [isSupporterSelectorOpen, setIsSupporterSelectorOpen] = useState(false)
+  const [selectedSupporter, setSelectedSupporter] = useState<Supporter | null>(null)
+
+  // 応援者設定の初期化
+  useEffect(() => {
+    const savedSupporter = localStorage.getItem('selectedSupporter')
+    if (savedSupporter) {
+      try {
+        setSelectedSupporter(JSON.parse(savedSupporter))
+      } catch (error) {
+        console.error('Error parsing saved supporter:', error)
+      }
+    }
+  }, [])
+
+  // 応援者設定の変更ハンドラー
+  const handleSupporterChange = (supporter: Supporter) => {
+    setSelectedSupporter(supporter)
+    localStorage.setItem('selectedSupporter', JSON.stringify(supporter))
+  }
 
   const fetchTasks = useCallback(async () => {
     try {
       setLoading(true)
       const today = format(currentDate, 'yyyy-MM-dd')
       
+      // 今日のタスクのみを取得（重複を防ぐ）
       const { data, error } = await supabase
         .from('action_tasks')
         .select('*')
         .gte('start_time', `${today} 00:00`)
-        .lte('start_time', `${today} 23:59`)
+        .lt('start_time', `${today} 23:59`)
         .order('start_time', { ascending: true })
 
       if (error) throw error
@@ -84,6 +116,7 @@ export default function ActionsPage() {
         return taskDate >= currentMonth && taskDate <= endOfMonth(currentDate)
       })
 
+      // すべてのカテゴリを確実に初期化
       const categoryHours: Record<ActionCategory, number> = {
         discussion: 0, round: 0, fas_preparation: 0, appointment: 0,
         clinic_related: 0, media_promotion: 0, meeting: 0, roleplay: 0,
@@ -91,24 +124,51 @@ export default function ActionsPage() {
         facility_preparation: 0, layout_change: 0, skill_learning: 0, other: 0
       }
 
+      const categoryMinutes: Record<ActionCategory, number> = {
+        discussion: 0, round: 0, fas_preparation: 0, appointment: 0,
+        clinic_related: 0, media_promotion: 0, meeting: 0, roleplay: 0,
+        documentation: 0, interview: 0, academic_circle: 0, ao_school_lecturer: 0,
+        facility_preparation: 0, layout_change: 0, skill_learning: 0, other: 0
+      }
+
       monthTasks.forEach(task => {
-        if (task.is_completed) {
+        // 完了済みでなくても、すべてのタスクの時間を計算
+        try {
           const start = parseISO(task.start_time)
           const end = parseISO(task.end_time)
-          const diffMs = end.getTime() - start.getTime()
-          const hours = diffMs / (1000 * 60 * 60)
-          categoryHours[task.category] += hours
+          
+          // 開始時刻と終了時刻が有効かチェック
+          if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
+            const diffMs = end.getTime() - start.getTime()
+            
+            // 負の値や異常に大きな値をチェック
+            if (diffMs > 0 && diffMs < 24 * 60 * 60 * 1000) { // 24時間以内
+              const hours = diffMs / (1000 * 60 * 60)
+              const minutes = diffMs / (1000 * 60)
+              
+              // カテゴリが有効かチェック
+              if (task.category && categoryHours.hasOwnProperty(task.category)) {
+                categoryHours[task.category] += hours
+                categoryMinutes[task.category] += minutes
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error calculating time for task:', task.id, error)
         }
       })
 
       const totalMonthHours = Object.values(categoryHours).reduce((sum, hours) => sum + hours, 0)
+      const totalMonthMinutes = Object.values(categoryMinutes).reduce((sum, minutes) => sum + minutes, 0)
       const daysInMonth = eachDayOfInterval({ start: currentMonth, end: endOfMonth(currentDate) }).length
 
       setMonthlySummary({
         year: currentDate.getFullYear(),
         month: currentDate.getMonth() + 1,
         category_hours: categoryHours,
+        category_minutes: categoryMinutes,
         total_hours: Math.round(totalMonthHours * 10) / 10,
+        total_minutes: Math.round(totalMonthMinutes),
         daily_average: daysInMonth > 0 ? Math.round((totalMonthHours / daysInMonth) * 10) / 10 : 0,
         completed_count: monthTasks.filter(task => task.is_completed).length
       })
@@ -122,8 +182,10 @@ export default function ActionsPage() {
   }, [fetchTasks])
 
   useEffect(() => {
-    fetchSummaries()
-  }, [fetchSummaries])
+    if (tasks.length > 0) {
+      fetchSummaries()
+    }
+  }, [tasks, fetchSummaries])
 
   const handleTaskCreate = async (taskData: Omit<ActionTask, 'id' | 'created_at' | 'updated_at'>) => {
     try {
@@ -253,13 +315,25 @@ export default function ActionsPage() {
             </p>
           </div>
           
-          <button
-            onClick={() => setIsFormOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            タスク追加
-          </button>
+          <div className="flex items-center gap-3">
+            {/* 応援者設定ボタン */}
+            <button
+              onClick={() => setIsSupporterSelectorOpen(true)}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors"
+            >
+              <Heart className="w-5 h-5" />
+              応援者設定
+            </button>
+            
+            {/* タスク追加ボタン */}
+            <button
+              onClick={() => setIsFormOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              タスク追加
+            </button>
+          </div>
         </div>
       </div>
 
@@ -313,7 +387,16 @@ export default function ActionsPage() {
       {/* クラッカー演出 */}
       <ConfettiEffect 
         isActive={showConfetti} 
-        onComplete={handleConfettiComplete} 
+        onComplete={handleConfettiComplete}
+        selectedSupporter={selectedSupporter}
+      />
+
+      {/* 応援者設定モーダル */}
+      <SupporterSelector
+        isOpen={isSupporterSelectorOpen}
+        onClose={() => setIsSupporterSelectorOpen(false)}
+        onSupporterChange={handleSupporterChange}
+        currentSupporter={selectedSupporter}
       />
     </div>
   )

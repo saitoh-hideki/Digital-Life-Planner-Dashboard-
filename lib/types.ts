@@ -180,7 +180,18 @@ export interface MonthlySummary {
   year: number
   month: number
   category_hours: Record<ActionCategory, number>
+  category_minutes: Record<ActionCategory, number>
   total_hours: number
+  total_minutes: number
   daily_average: number
   completed_count: number
+}
+
+// Supporter interface for confetti effect
+export interface Supporter {
+  id: string
+  name: string
+  avatar: string
+  messages: string[]
+  color: string
 }

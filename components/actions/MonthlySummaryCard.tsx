@@ -1,33 +1,21 @@
 'use client'
 
 import { MonthlySummary, ActionCategory } from '@/lib/types'
-import { getCategoryConfig } from '@/lib/actionCategories'
-import { BarChart3, Download, TrendingUp, Clock } from 'lucide-react'
+import { getCategoryConfig, ACTION_CATEGORIES } from '@/lib/actionCategories'
+import { BarChart3, Download, TrendingUp } from 'lucide-react'
 
 interface MonthlySummaryCardProps {
   summary: MonthlySummary
 }
 
 export default function MonthlySummaryCard({ summary }: MonthlySummaryCardProps) {
-  // カテゴリ別時間を降順でソート
-  const sortedCategories = Object.entries(summary.category_hours)
-    .filter(([, hours]) => hours > 0)
-    .sort(([, a], [, b]) => b - a)
-
-  // カテゴリの偏りをチェック（40%超で黄色、60%超で赤）
-  const getCategoryWarning = (hours: number) => {
-    const percentage = (hours / summary.total_hours) * 100
-    if (percentage > 60) return 'text-red-600 bg-red-50 border-red-200'
-    if (percentage > 40) return 'text-yellow-600 bg-yellow-50 border-yellow-200'
-    return 'text-gray-600 bg-gray-50 border-gray-200'
-  }
-
   const exportToCSV = () => {
-    const headers = ['カテゴリ', '時間（h）', '割合（%）']
-    const data = sortedCategories.map(([category, hours]) => {
-      const percentage = ((hours / summary.total_hours) * 100).toFixed(1)
-      const label = getCategoryConfig(category as ActionCategory).label
-      return [label, hours.toFixed(1), percentage]
+    const headers = ['カテゴリ', '時間（h）', '分', '割合（%）']
+    const data = ACTION_CATEGORIES.map(config => {
+      const minutes = summary.category_minutes[config.key] || 0
+      const hours = minutes / 60
+      const percentage = summary.total_minutes > 0 ? (minutes / summary.total_minutes) * 100 : 0
+      return [config.label, hours.toFixed(1), minutes, percentage.toFixed(1)]
     })
 
     const csvContent = [headers, ...data]
@@ -43,6 +31,46 @@ export default function MonthlySummaryCard({ summary }: MonthlySummaryCardProps)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+  }
+
+  // カテゴリごとの色を定義
+  const getCategoryStyle = (categoryKey: ActionCategory) => {
+    switch (categoryKey) {
+      case 'discussion':
+        return { bg: 'bg-blue-100', border: 'border-blue-200', text: 'text-blue-600' }
+      case 'round':
+        return { bg: 'bg-sky-100', border: 'border-sky-200', text: 'text-sky-600' }
+      case 'fas_preparation':
+        return { bg: 'bg-violet-100', border: 'border-violet-200', text: 'text-violet-600' }
+      case 'appointment':
+        return { bg: 'bg-yellow-100', border: 'border-yellow-200', text: 'text-yellow-600' }
+      case 'clinic_related':
+        return { bg: 'bg-red-100', border: 'border-red-200', text: 'text-red-600' }
+      case 'media_promotion':
+        return { bg: 'bg-purple-100', border: 'border-purple-200', text: 'text-purple-600' }
+      case 'meeting':
+        return { bg: 'bg-indigo-100', border: 'border-indigo-200', text: 'text-indigo-600' }
+      case 'roleplay':
+        return { bg: 'bg-green-100', border: 'border-green-200', text: 'text-green-600' }
+      case 'documentation':
+        return { bg: 'bg-cyan-100', border: 'border-cyan-200', text: 'text-cyan-600' }
+      case 'interview':
+        return { bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-700' }
+      case 'academic_circle':
+        return { bg: 'bg-emerald-100', border: 'border-emerald-200', text: 'text-emerald-600' }
+      case 'ao_school_lecturer':
+        return { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-600' }
+      case 'facility_preparation':
+        return { bg: 'bg-amber-100', border: 'border-amber-200', text: 'text-amber-600' }
+      case 'layout_change':
+        return { bg: 'bg-orange-100', border: 'border-orange-200', text: 'text-orange-600' }
+      case 'skill_learning':
+        return { bg: 'bg-lime-100', border: 'border-lime-200', text: 'text-lime-600' }
+      case 'other':
+        return { bg: 'bg-gray-100', border: 'border-gray-200', text: 'text-gray-700' }
+      default:
+        return { bg: 'bg-gray-100', border: 'border-gray-200', text: 'text-gray-700' }
+    }
   }
 
   return (
@@ -62,143 +90,64 @@ export default function MonthlySummaryCard({ summary }: MonthlySummaryCardProps)
         </button>
       </div>
 
-      {/* 基本統計 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="text-center p-4 bg-blue-50 rounded-lg">
-          <div className="text-2xl font-bold text-blue-600">{summary.total_hours}</div>
-          <div className="text-sm text-blue-700">総作業時間（h）</div>
-        </div>
-        <div className="text-center p-4 bg-green-50 rounded-lg">
-          <div className="text-2xl font-bold text-green-600">{summary.daily_average}</div>
-          <div className="text-sm text-green-700">日平均（h）</div>
-        </div>
-        <div className="text-center p-4 bg-purple-50 rounded-lg">
-          <div className="text-2xl font-bold text-purple-600">{summary.completed_count}</div>
-          <div className="text-sm text-purple-700">完了タスク数</div>
-        </div>
-      </div>
-
-      {/* カテゴリ別時間 */}
+      {/* カテゴリ別進捗状況 */}
       <div className="mb-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-gray-600" />
-          カテゴリ別時間配分
+          カテゴリ別進捗状況
         </h3>
         
-        {sortedCategories.length > 0 ? (
-          <div className="space-y-3">
-            {sortedCategories.map(([category, hours]) => {
-              const categoryConfig = getCategoryConfig(category as ActionCategory)
-              const percentage = (hours / summary.total_hours) * 100
-              const warningClass = getCategoryWarning(hours)
-              
-              return (
-                <div key={category} className="flex items-center justify-between p-3 rounded-lg border">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${categoryConfig.bgColor.replace('bg-', 'bg-')}`}></div>
-                    <span className="font-medium text-gray-900">{categoryConfig.label}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="font-medium text-gray-900">{hours.toFixed(1)}h</div>
-                      <div className="text-sm text-gray-500">{percentage.toFixed(1)}%</div>
-                    </div>
-                    
-                    {/* 警告表示 */}
-                    {percentage > 40 && (
-                      <div className={`px-2 py-1 rounded text-xs font-medium border ${warningClass}`}>
-                        {percentage > 60 ? '⚠️ 偏り大' : '⚠️ 偏り中'}
-                      </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {ACTION_CATEGORIES.map((categoryConfig) => {
+            const minutes = summary.category_minutes[categoryConfig.key] || 0
+            const hours = minutes / 60
+            const percentage = summary.total_minutes > 0 ? (minutes / summary.total_minutes) * 100 : 0
+            const style = getCategoryStyle(categoryConfig.key)
+            
+            return (
+              <div 
+                key={categoryConfig.key} 
+                className={`
+                  flex items-center justify-between p-4 rounded-lg border-2 transition-all hover:shadow-lg h-24
+                  ${style.bg} ${style.border} ${style.text}
+                `}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="font-semibold text-base">
+                    {categoryConfig.label}
+                  </span>
+                </div>
+                
+                <div className="text-right">
+                  <div className="font-bold text-base">
+                    {minutes > 0 ? (
+                      <>
+                        {hours >= 1 ? `${Math.floor(hours)}時間` : ''}
+                        {minutes % 60 > 0 ? `${minutes % 60}分` : ''}
+                        {hours >= 1 && minutes % 60 > 0 ? ' ' : ''}
+                        <span className="text-sm text-gray-600">
+                          ({hours.toFixed(1)}h)
+                        </span>
+                      </>
+                    ) : (
+                      '未実施'
                     )}
                   </div>
+                  {minutes > 0 ? (
+                    <div className="text-sm text-gray-600 font-medium">
+                      割合: {percentage.toFixed(1)}%
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500 font-medium">
+                      今月は実施なし
+                    </div>
+                  )}
                 </div>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            <Clock className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p>今月はまだ完了したタスクがありません</p>
-          </div>
-        )}
+              </div>
+            )
+          })}
+        </div>
       </div>
-
-      {/* グラフ表示（簡易版） */}
-      {sortedCategories.length > 0 && (
-        <div className="mb-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">時間配分グラフ</h3>
-          <div className="space-y-2">
-            {sortedCategories.slice(0, 8).map(([category, hours]) => {
-              const categoryConfig = getCategoryConfig(category as ActionCategory)
-              const percentage = (hours / summary.total_hours) * 100
-              
-              return (
-                <div key={category} className="flex items-center gap-3">
-                  <div className="w-20 text-sm text-gray-600 truncate">
-                    {categoryConfig.label}
-                  </div>
-                  <div className="flex-1 bg-gray-200 rounded-full h-3">
-                    <div
-                      className={`h-3 rounded-full transition-all duration-300 ${categoryConfig.bgColor.replace('bg-', 'bg-')}`}
-                      style={{ width: `${percentage}%` }}
-                    ></div>
-                  </div>
-                  <div className="w-16 text-right text-sm text-gray-600">
-                    {percentage.toFixed(1)}%
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* 分析・アドバイス */}
-      {sortedCategories.length > 0 && (
-        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <h4 className="font-medium text-gray-900 mb-2">今月の分析</h4>
-          <div className="text-sm text-gray-700 space-y-2">
-            {(() => {
-              const topCategory = sortedCategories[0]
-              const topPercentage = (topCategory[1] / summary.total_hours) * 100
-              
-              if (topPercentage > 60) {
-                return (
-                  <p>
-                    <span className="font-medium text-red-600">注意:</span> 
-                    {getCategoryConfig(topCategory[0] as ActionCategory).label}に時間が集中しています。
-                    他のカテゴリにも時間を配分することをお勧めします。
-                  </p>
-                )
-              } else if (topPercentage > 40) {
-                return (
-                  <p>
-                    <span className="font-medium text-yellow-600">バランス:</span> 
-                    時間配分は比較的バランスが取れています。
-                    継続して多様な活動を行いましょう。
-                  </p>
-                )
-              } else {
-                return (
-                  <p>
-                    <span className="font-medium text-green-600">良好:</span> 
-                    時間配分がバランス良く分散されています。
-                    この調子で継続しましょう。
-                  </p>
-                )
-              }
-            })()}
-            
-            <p>
-              <span className="font-medium text-blue-600">総評:</span> 
-              今月は{summary.total_hours}時間の作業を完了し、
-              日平均{summary.daily_average}時間の活動を行いました。
-              {summary.completed_count}件のタスクを達成し、充実した月でした。
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

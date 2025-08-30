@@ -32,3 +32,21 @@ INSERT INTO academic_circle_events (region_id, title, description, venue, start_
 INSERT INTO local_media_knowledge (region_id, title, description, media_type, url, issued_on, author) VALUES
   (1, 'デジタルライフプランナー実践ガイド 2024年版', '最新のDLP活動事例と実践的なノウハウを収録', 'PDF', 'https://example.com/guide2024.pdf', '2024-01-15', 'DLP協会'),
   (3, '高齢者向けデジタル支援の手引き', '京都府での実践事例を基にした支援マニュアル', 'PDF', 'https://example.com/manual.pdf', '2024-01-10', '京都府');
+
+-- サンプルアクションテーブルデータ（今日の日付で）
+INSERT INTO action_tasks (title, category, start_time, end_time, priority, memo, is_completed, created_at, updated_at) VALUES
+  ('ロールプレイング練習', 'roleplay', NOW()::date + '08:00:00', NOW()::date + '09:30:00', 'medium', 'クライアント対応の練習', false, NOW(), NOW()),
+  ('MTG準備', 'meeting', NOW()::date + '09:30:00', NOW()::date + '10:00:00', 'high', '午後の会議の準備', false, NOW(), NOW()),
+  ('資料作成', 'documentation', NOW()::date + '10:00:00', NOW()::date + '11:30:00', 'medium', 'プレゼン資料の作成', false, NOW(), NOW()),
+  ('ディスカッション', 'discussion', NOW()::date + '13:00:00', NOW()::date + '14:00:00', 'low', 'チーム内での意見交換', false, NOW(), NOW()),
+  ('ラウンド', 'round', NOW()::date + '14:30:00', NOW()::date + '15:30:00', 'medium', '施設見学', false, NOW(), NOW()),
+  ('FAS拡張準備', 'fas_preparation', NOW()::date + '16:00:00', NOW()::date + '17:00:00', 'high', '来月の拡張に向けて', false, NOW(), NOW()),
+  ('アポイント', 'appointment', NOW()::date + '17:30:00', NOW()::date + '18:00:00', 'high', 'クライアントとの面談', false, NOW(), NOW()),
+  ('クリニック関連', 'clinic_related', NOW()::date + '18:30:00', NOW()::date + '19:00:00', 'medium', '設備点検', false, NOW(), NOW()),
+  ('メディア・販促制作', 'media_promotion', NOW()::date + '19:00:00', NOW()::date + '19:30:00', 'low', 'SNS投稿作成', false, NOW(), NOW()),
+  ('取材活動', 'interview', NOW()::date + '08:00:00', NOW()::date + '10:00:00', 'high', '地域企業への取材', false, NOW(), NOW()),
+  ('アカデミックサークル', 'academic_circle', NOW()::date + '10:30:00', NOW()::date + '12:00:00', 'medium', '勉強会参加', false, NOW(), NOW()),
+  ('AO校講師活動', 'ao_school_lecturer', NOW()::date + '13:30:00', NOW()::date + '15:00:00', 'high', '高校での講義', false, NOW(), NOW()),
+  ('施設準備', 'facility_preparation', NOW()::date + '15:30:00', NOW()::date + '16:30:00', 'medium', '新施設の準備', false, NOW(), NOW()),
+  ('レイアウト変更', 'layout_change', NOW()::date + '16:30:00', NOW()::date + '17:00:00', 'low', 'オフィスレイアウト調整', false, NOW(), NOW()),
+  ('スキルラーニング', 'skill_learning', NOW()::date + '19:30:00', NOW()::date + '20:00:00', 'medium', '新しいツールの学習', false, NOW(), NOW());
