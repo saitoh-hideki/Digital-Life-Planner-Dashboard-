@@ -17,7 +17,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body className={inter.className}>
-        <header className="bg-white shadow-sm border-b">
+        <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md shadow-sm border-b border-slate-100/50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
@@ -29,7 +29,7 @@ export default function RootLayout({
             </div>
           </div>
         </header>
-        <main className="min-h-screen bg-gray-50">
+        <main className="min-h-screen bg-gray-50 pt-24">
           {children}
         </main>
       </body>

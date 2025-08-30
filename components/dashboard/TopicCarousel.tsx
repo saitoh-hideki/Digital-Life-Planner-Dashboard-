@@ -61,6 +61,12 @@ export default function TopicCarousel({ topics }: TopicCarouselProps) {
 
   return (
     <div className="relative">
+      {/* タイトル */}
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-slate-900 mb-2">本日のトピック</h2>
+        <p className="text-sm text-slate-600">最新のニュースとトピックをお届けします</p>
+      </div>
+
       {/* ナビゲーションボタン */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
@@ -105,7 +111,7 @@ export default function TopicCarousel({ topics }: TopicCarouselProps) {
         {topics.map((topic) => (
           <div
             key={topic.id}
-            className="flex-shrink-0 w-80 bg-white rounded-xl p-5 border border-slate-100 hover:border-slate-200 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group"
+            className="flex-shrink-0 w-80 bg-white rounded-xl p-5 border border-slate-100 hover:border-slate-200 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group shadow-sm hover:shadow-xl"
           >
             <div className="space-y-4">
               {/* ヘッダー部分 */}

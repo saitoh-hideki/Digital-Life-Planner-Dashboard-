@@ -6,6 +6,7 @@ import { Topic, LocalApp, Subsidy, LocalNews, AcademicCircleEvent, LocalMediaKno
 import DashboardCard from '@/components/dashboard/DashboardCard'
 import TopicCarousel from '@/components/dashboard/TopicCarousel'
 import InfoItem from '@/components/dashboard/InfoItem'
+import AlertsButton from '@/components/dashboard/AlertsButton'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Calendar, FileText, Archive, Settings, ChevronDown } from 'lucide-react'
@@ -110,6 +111,7 @@ export default function DashboardPage() {
     { name: '地域ニュース', href: '/admin/news', icon: '📝' },
     { name: 'アカデミックサークル', href: '/admin/events', icon: '🎓' },
     { name: '地域媒体ナレッジ', href: '/admin/knowledge', icon: '📖' },
+    { name: 'Alerts管理', href: '/admin/alerts', icon: '⚠️' },
     { name: 'ニュースアーカイブ', href: '/admin/archive', icon: '📂' },
     { name: 'Meeting', href: '/admin/meetings', icon: '🤝' }
   ]
@@ -149,32 +151,21 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      {/* ヘッダー・ヒーロー */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-slate-100/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col items-center justify-center text-center">
-            <div className="space-y-4">
-              <div className="flex items-center justify-center gap-4">
-                <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl text-white text-3xl shadow-lg">
-                  📰
-                </div>
-                <div className="relative">
-                  <h1 className="text-4xl font-bold text-slate-900 tracking-tight mb-2">
-                    Digital Life Planner
-                  </h1>
-                  <div className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full"></div>
-                </div>
-              </div>
-              <p className="text-xl text-blue-600 font-medium">
-                Your Hub for Learning, Planning, and Acting
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* メインコンテンツ */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* ページタイトルとアラートボタン */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">
+              Digital Life Planner
+            </h1>
+            <p className="text-slate-600">
+              Your Hub for Learning, Planning, and Acting
+            </p>
+          </div>
+          <AlertsButton />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* 1段目：本日のトピック（フル幅・カードスタイル） */}
           <div className="col-span-full">

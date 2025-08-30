@@ -96,6 +96,24 @@ export interface NewsArchive {
   tags?: string[]
 }
 
+// Alerts interface for police and consumer affairs RSS feeds
+export interface Alert {
+  id: string
+  source: '警察庁' | '消費者庁'
+  title_original: string
+  summary_original?: string
+  published_at: string
+  url: string
+  severity: 'critical' | 'high' | 'info'
+  category: 'phishing' | 'scam' | 'recall' | 'gov_notice'
+  title_ja?: string
+  summary_ja?: string
+  url_hash: string
+  is_read: boolean
+  created_at: string
+  updated_at: string
+}
+
 // 検索結果用の型
 export interface SearchResult {
   id?: number
