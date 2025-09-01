@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { ActionTask, ActionCategory } from '@/lib/types'
 import { format, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { Clock, CheckCircle, Edit, Trash2, Plus, Calendar } from 'lucide-react'
+import { Clock, CheckCircle, Edit, Trash2, Plus, Calendar, RotateCcw } from 'lucide-react'
 
 interface ActionTimeTableProps {
   tasks: ActionTask[]
@@ -13,6 +13,7 @@ interface ActionTimeTableProps {
   onTaskClick: (task: ActionTask) => void
   onTaskComplete: (taskId: string) => void
   onTaskDelete: (taskId: string) => void
+  onResetTasks: () => void
 }
 
 export default function ActionTimeTable({
@@ -21,7 +22,8 @@ export default function ActionTimeTable({
   onTimeSlotClick,
   onTaskClick,
   onTaskComplete,
-  onTaskDelete
+  onTaskDelete,
+  onResetTasks
 }: ActionTimeTableProps) {
   const [currentTime] = useState(new Date())
   
@@ -156,13 +158,25 @@ export default function ActionTimeTable({
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       {/* ヘッダー */}
       <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-          <Clock className="w-5 h-5 text-blue-600" />
-          {format(selectedDate, 'yyyy年M月d日（EEEE）', { locale: ja })}の時間割（8:00〜20:00）
-        </h2>
-        <p className="text-sm text-gray-600 mt-1">
-          クリックしてタスクを追加、ドラッグで移動、リサイズで時間変更
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-blue-600" />
+              {format(selectedDate, 'yyyy年M月d日（EEEE）', { locale: ja })}の時間割（8:00〜20:00）
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              クリックしてタスクを追加、ドラッグで移動、リサイズで時間変更
+            </p>
+          </div>
+          <button
+            onClick={onResetTasks}
+            className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium text-sm transition-colors hover:scale-105 shadow-sm"
+            title="当日のタスクを全てクリア"
+          >
+            <RotateCcw className="w-4 h-4" />
+            リセット
+          </button>
+        </div>
       </div>
 
       {/* 時間テーブル - スクロール可能なコンテナ */}

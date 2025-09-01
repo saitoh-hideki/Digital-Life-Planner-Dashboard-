@@ -196,6 +196,24 @@ export default function DashboardPage() {
                         <p className="text-slate-600 text-sm leading-relaxed line-clamp-2">
                           {subsidy.summary || subsidy.organization}
                         </p>
+                        <div className="flex items-center justify-between mt-3">
+                          <span className="text-xs text-slate-500">
+                            {subsidy.organization}
+                          </span>
+                          {subsidy.url && (
+                            <a
+                              href={subsidy.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                              詳細
+                            </a>
+                          )}
+                        </div>
                       </div>
                       {subsidy.status && (
                         <span className={`px-3 py-2 rounded-lg text-xs font-semibold flex-shrink-0 ${

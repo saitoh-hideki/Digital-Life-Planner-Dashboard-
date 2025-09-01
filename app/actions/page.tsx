@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { ActionTask, ActionCategory, DailySummary, MonthlySummary } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns'
-import { Calendar, Plus, ArrowLeft, Home, Heart, Globe } from 'lucide-react'
+import { ja } from 'date-fns/locale'
+import { Calendar, Plus, ArrowLeft, Home, Heart } from 'lucide-react'
 import Link from 'next/link'
 import ActionTimeTable from '@/components/actions/ActionTimeTable'
 import ActionForm from '@/components/actions/ActionForm'
@@ -12,7 +13,6 @@ import DailySummaryCard from '@/components/actions/DailySummaryCard'
 import MonthlySummaryCard from '@/components/actions/MonthlySummaryCard'
 import ConfettiEffect from '@/components/actions/ConfettiEffect'
 import SupporterSelector from '@/components/actions/SupporterSelector'
-import LocalNewsSettings from '@/components/actions/LocalNewsSettings'
 import DateSelector from '@/components/actions/DateSelector'
 
 // 応援者の型定義（簡素化）
@@ -38,7 +38,6 @@ export default function ActionsPage() {
   const [showConfetti, setShowConfetti] = useState(false)
   const [isSupporterSelectorOpen, setIsSupporterSelectorOpen] = useState(false)
   const [selectedSupporter, setSelectedSupporter] = useState<Supporter | null>(null)
-  const [isLocalNewsSettingsOpen, setIsLocalNewsSettingsOpen] = useState(false)
 
   // 応援者設定の初期化
   useEffect(() => {
@@ -290,6 +289,39 @@ export default function ActionsPage() {
     }
   }
 
+  const handleResetTasks = async () => {
+    if (!confirm('当日のタスクを全て削除しますか？この操作は元に戻せません。')) {
+      return
+    }
+
+    try {
+      setLoading(true)
+      const targetDate = format(selectedDate, 'yyyy-MM-dd')
+      
+      // 選択された日付のタスクを全て削除
+      const { error } = await supabase
+        .from('action_tasks')
+        .delete()
+        .gte('start_time', `${targetDate} 00:00`)
+        .lt('start_time', `${targetDate} 23:59`)
+
+      if (error) throw error
+
+      // ローカルステートをクリア
+      setTasks([])
+      fetchSummaries()
+      
+      // 成功メッセージを表示
+      setError(null)
+      alert('当日のタスクを全て削除しました')
+    } catch (error) {
+      console.error('Error resetting tasks:', error)
+      setError('タスクのリセットに失敗しました')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleTaskComplete = async (taskId: string) => {
     await handleTaskUpdate(taskId, {
       is_completed: true,
@@ -358,15 +390,6 @@ export default function ActionsPage() {
           </div>
           
           <div className="flex items-center gap-3">
-            {/* 地域ニュース設定ボタン */}
-            <button
-              onClick={() => setIsLocalNewsSettingsOpen(true)}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors"
-            >
-              <Globe className="w-5 h-5" />
-              地域ニュース設定
-            </button>
-            
             {/* 応援者設定ボタン */}
             <button
               onClick={() => setIsSupporterSelectorOpen(true)}
@@ -416,6 +439,7 @@ export default function ActionsPage() {
             onTaskClick={handleTaskClick}
             onTaskComplete={handleTaskComplete}
             onTaskDelete={handleTaskDelete}
+            onResetTasks={handleResetTasks}
           />
         </div>
 
@@ -458,11 +482,6 @@ export default function ActionsPage() {
         currentSupporter={selectedSupporter}
       />
 
-      {/* 地域ニュース設定モーダル */}
-      <LocalNewsSettings
-        isOpen={isLocalNewsSettingsOpen}
-        onClose={() => setIsLocalNewsSettingsOpen(false)}
-      />
     </div>
   )
 }
