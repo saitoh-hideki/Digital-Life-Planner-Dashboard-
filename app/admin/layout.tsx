@@ -15,15 +15,13 @@ import {
 
 const navigation = [
   { name: 'ダッシュボード', href: '/admin', icon: Home },
-  { name: '補助金・助成金', href: '/admin/subsidies', icon: Gift },
   { name: 'トピック', href: '/admin/topics', icon: FileText },
+  { name: '補助金・助成金', href: '/admin/subsidies', icon: Gift },
   { name: '地域アプリ', href: '/admin/apps', icon: Database },
-  { name: 'アラート', href: '/admin/alerts', icon: AlertTriangle },
+  { name: '地域ニュース', href: '/admin/news', icon: FileText },
   { name: 'イベント', href: '/admin/events', icon: Calendar },
   { name: 'ナレッジ', href: '/admin/knowledge', icon: Archive },
-  { name: 'ニュース', href: '/admin/news', icon: FileText },
-  { name: '会議', href: '/admin/meetings', icon: Calendar },
-  { name: '設定', href: '/admin/settings', icon: Settings },
+  { name: 'アラート', href: '/admin/alerts', icon: AlertTriangle }
 ]
 
 export default function AdminLayout({

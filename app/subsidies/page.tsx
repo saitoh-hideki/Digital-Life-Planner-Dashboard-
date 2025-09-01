@@ -50,9 +50,8 @@ export default function SubsidiesPage() {
     setLoading(true)
     try {
       const { data, error } = await supabase
-        .from('subsidies_normalized')
+        .from('subsidies_sheet')
         .select('*')
-        .order('apply_end', { ascending: true })
         .order('created_at', { ascending: false })
       
       if (error) throw error

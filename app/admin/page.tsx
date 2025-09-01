@@ -1,40 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { 
-  FileText, 
-  Database, 
-  AlertTriangle, 
-  Calendar, 
-  Archive, 
-  Gift,
-  TrendingUp,
-  Users
-} from 'lucide-react'
+import { FileText, Database, Gift, Calendar, Archive, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 
-interface DashboardStats {
-  topics: number
-  localApps: number
-  subsidies: number
-  localNews: number
-  events: number
-  knowledge: number
-  alerts: number
-  meetings: number
-}
-
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState<DashboardStats>({
+  const [stats, setStats] = useState({
     topics: 0,
     localApps: 0,
     subsidies: 0,
     localNews: 0,
     events: 0,
     knowledge: 0,
-    alerts: 0,
-    meetings: 0
+    alerts: 0
   })
   const [loading, setLoading] = useState(true)
 
@@ -43,6 +22,7 @@ export default function AdminDashboardPage() {
   }, [])
 
   const loadStats = async () => {
+    setLoading(true)
     try {
       const [
         { count: topics },
@@ -51,17 +31,15 @@ export default function AdminDashboardPage() {
         { count: localNews },
         { count: events },
         { count: knowledge },
-        { count: alerts },
-        { count: meetings }
+        { count: alerts }
       ] = await Promise.all([
         supabase.from('topics').select('*', { count: 'exact', head: true }),
         supabase.from('local_apps').select('*', { count: 'exact', head: true }),
-        supabase.from('subsidies_normalized').select('*', { count: 'exact', head: true }),
+        supabase.from('subsidies_sheet').select('*', { count: 'exact', head: true }),
         supabase.from('local_news').select('*', { count: 'exact', head: true }),
         supabase.from('academic_circle_events').select('*', { count: 'exact', head: true }),
         supabase.from('local_media_knowledge').select('*', { count: 'exact', head: true }),
-        supabase.from('alerts').select('*', { count: 'exact', head: true }),
-        supabase.from('meetings').select('*', { count: 'exact', head: true })
+        supabase.from('alerts').select('*', { count: 'exact', head: true })
       ])
 
       setStats({
@@ -71,8 +49,7 @@ export default function AdminDashboardPage() {
         localNews: localNews || 0,
         events: events || 0,
         knowledge: knowledge || 0,
-        alerts: alerts || 0,
-        meetings: meetings || 0
+        alerts: alerts || 0
       })
     } catch (error) {
       console.error('Error loading stats:', error)
@@ -130,13 +107,6 @@ export default function AdminDashboardPage() {
       icon: AlertTriangle,
       href: '/admin/alerts',
       color: 'bg-yellow-500'
-    },
-    {
-      name: '会議',
-      value: stats.meetings,
-      icon: Users,
-      href: '/admin/meetings',
-      color: 'bg-pink-500'
     }
   ]
 
@@ -188,7 +158,7 @@ export default function AdminDashboardPage() {
             <Gift className="w-5 h-5 text-blue-600" />
             <div>
               <div className="font-medium text-blue-900">補助金・助成金管理</div>
-              <div className="text-sm text-blue-600">CSVインポート・ETL実行</div>
+              <div className="text-sm text-blue-600">CSVインポート・管理</div>
             </div>
           </Link>
           

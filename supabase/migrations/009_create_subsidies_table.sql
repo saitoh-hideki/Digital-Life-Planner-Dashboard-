@@ -19,9 +19,9 @@ CREATE INDEX IF NOT EXISTS idx_subsidies_prefecture_municipality ON public.subsi
 CREATE INDEX IF NOT EXISTS idx_subsidies_apply_end ON public.subsidies(apply_end);
 CREATE INDEX IF NOT EXISTS idx_subsidies_status ON public.subsidies(status);
 
--- 全文検索用のGINインデックス（日本語対応）
+-- 全文検索用のGINインデックス（英語のみ対応）
 CREATE INDEX IF NOT EXISTS idx_subsidies_fulltext ON public.subsidies 
-USING gin(to_tsvector('japanese', COALESCE(name, '') || ' ' || COALESCE(summary, '') || ' ' || COALESCE(issuer, '') || ' ' || COALESCE(audience, '')));
+USING gin(to_tsvector('english', COALESCE(name, '') || ' ' || COALESCE(summary, '') || ' ' || COALESCE(issuer, '') || ' ' || COALESCE(audience, '')));
 
 -- RLSポリシー設定
 ALTER TABLE public.subsidies ENABLE ROW LEVEL SECURITY;
@@ -98,23 +98,23 @@ INSERT INTO public.subsidies (
         '次世代産業育成補助金',
         'AI、IoT、バイオテクノロジーなど次世代産業分野の研究開発を支援する補助金です。',
         '福岡市経済観光文化局',
-        '市内企業、研究機関',
-        'https://example.com/nextgen-industry',
+        '次世代産業分野の事業者',
+        'https://example.com/nextgen-subsidy',
         '2024-06-01',
-        '2025-01-31',
+        '2024-12-31',
         'coming_soon'
     );
 
 -- コメント追加
-COMMENT ON TABLE public.subsidies IS '補助金・助成金情報を管理するテーブル';
-COMMENT ON COLUMN public.subsidies.id IS '一意識別子';
+COMMENT ON TABLE public.subsidies IS '補助金・助成金テーブル（旧版）';
+COMMENT ON COLUMN public.subsidies.id IS '主キー';
 COMMENT ON COLUMN public.subsidies.prefecture IS '都道府県';
 COMMENT ON COLUMN public.subsidies.municipality IS '市区町村';
-COMMENT ON COLUMN public.subsidies.name IS '補助金・助成金名';
+COMMENT ON COLUMN public.subsidies.name IS '制度名';
 COMMENT ON COLUMN public.subsidies.summary IS '概要';
-COMMENT ON COLUMN public.subsidies.issuer IS '発行者・担当部署';
+COMMENT ON COLUMN public.subsidies.issuer IS '実施機関';
 COMMENT ON COLUMN public.subsidies.audience IS '対象者';
-COMMENT ON COLUMN public.subsidies.url IS '公式ページURL';
+COMMENT ON COLUMN public.subsidies.url IS '公式リンク';
 COMMENT ON COLUMN public.subsidies.apply_start IS '申請開始日';
 COMMENT ON COLUMN public.subsidies.apply_end IS '申請終了日';
 COMMENT ON COLUMN public.subsidies.status IS 'ステータス: open(公募中), closed(終了), coming_soon(公募予定)';

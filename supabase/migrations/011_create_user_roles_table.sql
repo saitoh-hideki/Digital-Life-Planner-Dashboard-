@@ -80,10 +80,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.user_roles TO authenticated
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.user_profiles TO authenticated;
 GRANT USAGE ON SCHEMA public TO authenticated;
 
--- サンプルデータの挿入（管理者ユーザー用）
--- 注意: 実際のユーザーIDに置き換える必要があります
-INSERT INTO public.user_roles (user_id, role, permissions) VALUES 
-  ('00000000-0000-0000-0000-000000000000', 'admin', '{"can_manage_users": true, "can_manage_content": true, "can_access_admin": true}');
+-- サンプルデータの挿入は削除（実際のユーザーIDが必要なため）
+-- INSERT INTO public.user_roles (user_id, role, permissions) VALUES 
+--   ('00000000-0000-0000-0000-0000-000000000000', 'admin', '{"can_manage_users": true, "can_manage_content": true, "can_access_admin": true}');
 
 -- 更新トリガーの作成
 CREATE OR REPLACE FUNCTION update_updated_at_column()

@@ -48,27 +48,6 @@ export interface SubsidySheet {
   created_at: string
 }
 
-// 正規化済みの補助金・助成金（アプリ表示用）
-export interface SubsidyNormalized {
-  id: string
-  source_row_id: string
-  name: string
-  summary?: string
-  issuer?: string
-  audience?: string
-  url?: string
-  apply_start?: string
-  apply_end?: string
-  status: 'open' | 'closed' | 'coming_soon'
-  prefecture?: string
-  municipality?: string
-  amount_text?: string
-  amount_min?: number
-  amount_max?: number
-  created_at: string
-  updated_at: string
-}
-
 export interface Topic {
   id?: number
   headline: string

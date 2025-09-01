@@ -126,8 +126,7 @@ export default function DashboardPage() {
     { name: 'アカデミックサークル', href: '/admin/events', icon: '🎓' },
     { name: '地域媒体ナレッジ', href: '/admin/knowledge', icon: '📖' },
     { name: 'Alerts管理', href: '/admin/alerts', icon: '⚠️' },
-    { name: 'ニュースアーカイブ', href: '/admin/archive', icon: '📂' },
-    { name: 'Meeting', href: '/admin/meetings', icon: '🤝' }
+    { name: 'ニュースアーカイブ', href: '/admin/archive', icon: '📂' }
   ]
 
   if (loading) {
