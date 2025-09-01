@@ -11,9 +11,10 @@ import ActionTimeTable from '@/components/actions/ActionTimeTable'
 import ActionForm from '@/components/actions/ActionForm'
 import DailySummaryCard from '@/components/actions/DailySummaryCard'
 import MonthlySummaryCard from '@/components/actions/MonthlySummaryCard'
-import ConfettiEffect from '@/components/actions/ConfettiEffect'
+// import ConfettiEffect from '@/components/actions/ConfettiEffect'
 import SupporterSelector from '@/components/actions/SupporterSelector'
 import DateSelector from '@/components/actions/DateSelector'
+import MustDoCalendar from '@/components/actions/MustDoCalendar'
 
 // 応援者の型定義（簡素化）
 interface Supporter {
@@ -242,7 +243,6 @@ export default function ActionsPage() {
       if (error) throw error
 
       setTasks(prev => [...prev, data[0]])
-      setIsFormOpen(false)
       fetchSummaries()
     } catch (error) {
       console.error('Error creating task:', error)
@@ -289,6 +289,17 @@ export default function ActionsPage() {
     }
   }
 
+  const handleTimeSlotClick = (time: string) => {
+    setSelectedTime(time)
+    setSelectedTask(null)
+    setIsFormOpen(true)
+  }
+
+  const handleTaskClick = (task: ActionTask) => {
+    setSelectedTask(task)
+    setIsFormOpen(true)
+  }
+
   const handleResetTasks = async () => {
     if (!confirm('当日のタスクを全て削除しますか？この操作は元に戻せません。')) {
       return
@@ -332,20 +343,11 @@ export default function ActionsPage() {
     setShowConfetti(true)
   }
 
-  const handleTimeSlotClick = (time: string) => {
-    setSelectedTime(time)
-    setSelectedTask(null) // タスクを選択解除
-    setIsFormOpen(true)
-  }
 
-  const handleTaskClick = (task: ActionTask) => {
-    setSelectedTask(task)
-    setIsFormOpen(true)
-  }
 
-  const handleConfettiComplete = () => {
-    setShowConfetti(false)
-  }
+  // const handleConfettiComplete = () => {
+  //   setShowConfetti(false)
+  // }
 
   if (loading) {
     return (
@@ -429,9 +431,9 @@ export default function ActionsPage() {
       )}
 
       {/* メインコンテンツ */}
-      <div className="grid grid-cols-1 lg:grid-cols-7 gap-8 mt-8">
-        {/* 左カラム：時間テーブル（70%） */}
-        <div className="lg:col-span-5">
+      <div className="flex flex-col lg:flex-row gap-8 mt-8">
+        {/* 左カラム：時間テーブル（45%） */}
+        <div className="lg:w-[45%]">
           <ActionTimeTable
             tasks={tasks}
             selectedDate={selectedDate}
@@ -443,22 +445,28 @@ export default function ActionsPage() {
           />
         </div>
 
-        {/* 右カラム：タスク作成・編集（30%） */}
-        <div className="lg:col-span-2">
-          <ActionForm
-            isOpen={isFormOpen}
-            onClose={() => {
-              setIsFormOpen(false)
-              setSelectedTask(null)
-              setSelectedTime('') // フォームを閉じるときに選択時間をリセット
-            }}
-            onSubmit={handleTaskCreate}
-            onUpdate={handleTaskUpdate}
-            task={selectedTask}
-            selectedTime={selectedTime}
-          />
+        {/* 右カラム：Must-Do カレンダー（55%） */}
+        <div className="lg:w-[55%]">
+          <div className="bg-gray-50 rounded-lg p-6 h-full">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Must-Do カレンダー</h2>
+            <MustDoCalendar currentDate={selectedDate} />
+          </div>
         </div>
       </div>
+
+      {/* タスク作成・編集フォーム */}
+      <ActionForm
+        isOpen={isFormOpen}
+        onClose={() => {
+          setIsFormOpen(false)
+          setSelectedTask(null)
+          setSelectedTime('')
+        }}
+        onSubmit={handleTaskCreate}
+        onUpdate={handleTaskUpdate}
+        task={selectedTask}
+        selectedTime={selectedTime}
+      />
 
       {/* エラーメッセージ */}
       {error && (
@@ -468,11 +476,11 @@ export default function ActionsPage() {
       )}
 
       {/* クラッカー演出 */}
-      <ConfettiEffect 
+      {/* <ConfettiEffect 
         isActive={showConfetti} 
         onComplete={handleConfettiComplete}
         selectedSupporter={selectedSupporter}
-      />
+      /> */}
 
       {/* 応援者設定モーダル */}
       <SupporterSelector

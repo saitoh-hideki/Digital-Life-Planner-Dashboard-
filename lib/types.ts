@@ -285,3 +285,17 @@ export interface AuthUser {
   role: UserRole
   profile?: UserProfile
 }
+
+// Must-Do Calendar functionality
+export type MustDoScope = 'month' | 'week' | 'day'
+
+export interface MustDoItem {
+  id: string
+  scope: MustDoScope
+  anchor_date: string // YYYY-MM-DD format
+  title: string
+  status: 'todo' | 'done'
+  order_index: number
+  created_at: string
+  updated_at: string
+}
