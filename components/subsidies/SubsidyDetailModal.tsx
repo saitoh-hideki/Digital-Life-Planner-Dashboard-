@@ -1,13 +1,13 @@
 'use client'
 
-import { SubsidyNormalized } from '@/lib/types'
+import { Subsidy } from '@/lib/types'
 import { X, ExternalLink, Calendar, Building2, MapPin, Users, FileText, Info } from 'lucide-react'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { useEffect } from 'react'
 
 interface SubsidyDetailModalProps {
-  subsidy: SubsidyNormalized
+  subsidy: Subsidy
   isOpen: boolean
   onClose: () => void
 }
@@ -36,45 +36,51 @@ export default function SubsidyDetailModal({ subsidy, isOpen, onClose }: Subsidy
 
   // Status badge configuration
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'open':
-        return {
-          text: '公募中',
-          className: 'bg-green-100 text-green-800 border-green-200',
-          iconColor: 'text-green-600'
-        }
-      case 'coming_soon':
-        return {
-          text: '公募予定',
-          className: 'bg-orange-100 text-orange-800 border-orange-200',
-          iconColor: 'text-orange-600'
-        }
-      case 'closed':
-        return {
-          text: '終了',
-          className: 'bg-gray-100 text-gray-800 border-gray-200',
-          iconColor: 'text-gray-600'
-        }
-      default:
-        return {
-          text: '不明',
-          className: 'bg-gray-100 text-gray-800 border-gray-200',
-          iconColor: 'text-gray-600'
-        }
+    if (!status) return {
+      text: '不明',
+      className: 'bg-gray-100 text-gray-800 border-gray-200',
+      iconColor: 'text-gray-600'
+    }
+
+    const normalized = status.toLowerCase().trim()
+    
+    if (normalized.includes('募集中') || normalized.includes('受付中') || 
+        normalized.includes('open') || normalized.includes('active')) {
+      return {
+        text: '公募中',
+        className: 'bg-green-100 text-green-800 border-green-200',
+        iconColor: 'text-green-600'
+      }
+    }
+    
+    if (normalized.includes('募集終了') || normalized.includes('受付終了') || 
+        normalized.includes('締切') || normalized.includes('closed') || 
+        normalized.includes('終了')) {
+      return {
+        text: '終了',
+        className: 'bg-gray-100 text-gray-800 border-gray-200',
+        iconColor: 'text-gray-600'
+      }
+    }
+    
+    if (normalized.includes('予定') || normalized.includes('準備中') || 
+        normalized.includes('近日') || normalized.includes('coming') || 
+        normalized.includes('soon')) {
+      return {
+        text: '公募予定',
+        className: 'bg-orange-100 text-orange-800 border-orange-200',
+        iconColor: 'text-orange-600'
+      }
+    }
+    
+    return {
+      text: status,
+      className: 'bg-blue-100 text-blue-800 border-blue-200',
+      iconColor: 'text-blue-600'
     }
   }
 
-  // Calculate days until deadline
-  const getDaysUntilDeadline = (endDate: string) => {
-    const now = new Date()
-    const end = new Date(endDate)
-    const diffTime = end.getTime() - now.getTime()
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    return diffDays
-  }
-
   const statusBadge = getStatusBadge(subsidy.status)
-  const daysUntilDeadline = subsidy.apply_end ? getDaysUntilDeadline(subsidy.apply_end) : null
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -97,19 +103,16 @@ export default function SubsidyDetailModal({ subsidy, isOpen, onClose }: Subsidy
               <X className="w-5 h-5" />
             </button>
             
-            {/* Title and location */}
+            {/* Title and organization */}
             <div className="pr-12">
               <h2 className="text-2xl font-bold mb-3 leading-tight">
                 {subsidy.name}
               </h2>
               
-              {(subsidy.prefecture || subsidy.municipality) && (
+              {subsidy.organization && (
                 <div className="flex items-center gap-2 text-green-100 mb-4">
-                  <MapPin className="w-4 h-4" />
-                  <span>
-                    {subsidy.prefecture}
-                    {subsidy.municipality && ` ${subsidy.municipality}`}
-                  </span>
+                  <Building2 className="w-4 h-4" />
+                  <span>{subsidy.organization}</span>
                 </div>
               )}
               
@@ -122,23 +125,6 @@ export default function SubsidyDetailModal({ subsidy, isOpen, onClose }: Subsidy
 
           {/* Content */}
           <div className="px-6 py-6 space-y-6 max-h-[60vh] overflow-y-auto">
-            {/* Deadline warning */}
-            {daysUntilDeadline !== null && daysUntilDeadline <= 7 && daysUntilDeadline >= 0 && (
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
-                  <div>
-                    <div className="font-semibold text-orange-800">
-                      {daysUntilDeadline === 0 ? '⚠️ 本日締切です！' : `⚠️ 締切まであと${daysUntilDeadline}日です`}
-                    </div>
-                    <div className="text-sm text-orange-700 mt-1">
-                      お早めにご申請ください
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Summary */}
             {subsidy.summary && (
               <div className="space-y-3">
@@ -154,60 +140,58 @@ export default function SubsidyDetailModal({ subsidy, isOpen, onClose }: Subsidy
 
             {/* Details Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Issuer */}
-              {subsidy.issuer && (
+              {/* Organization */}
+              {subsidy.organization && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-slate-500" />
                     <span className="text-sm font-medium text-slate-700">発行者・担当部署</span>
                   </div>
-                  <p className="text-slate-900 pl-6">{subsidy.issuer}</p>
+                  <p className="text-slate-900 pl-6">{subsidy.organization}</p>
                 </div>
               )}
 
-              {/* Audience */}
-              {subsidy.audience && (
+              {/* Target Audience */}
+              {subsidy.target_audience && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-slate-500" />
                     <span className="text-sm font-medium text-slate-700">対象者</span>
                   </div>
-                  <p className="text-slate-900 pl-6">{subsidy.audience}</p>
+                  <p className="text-slate-900 pl-6">{subsidy.target_audience}</p>
                 </div>
               )}
 
-              {/* Application Start Date */}
-              {subsidy.apply_start && (
+              {/* Purpose */}
+              {subsidy.purpose && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-slate-500" />
-                    <span className="text-sm font-medium text-slate-700">申請開始日</span>
+                    <Info className="w-4 h-4 text-slate-500" />
+                    <span className="text-sm font-medium text-slate-700">目的・用途</span>
                   </div>
-                  <p className="text-slate-900 pl-6">
-                    {format(new Date(subsidy.apply_start), 'yyyy年MM月dd日(E)', { locale: ja })}
-                  </p>
+                  <p className="text-slate-900 pl-6">{subsidy.purpose}</p>
                 </div>
               )}
 
-              {/* Application End Date */}
-              {subsidy.apply_end && (
+              {/* Amount */}
+              {subsidy.amount && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-slate-500" />
+                    <span className="text-sm font-medium text-slate-700">補助金額</span>
+                  </div>
+                  <p className="text-slate-900 pl-6">{subsidy.amount}</p>
+                </div>
+              )}
+
+              {/* Period */}
+              {subsidy.period && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-slate-500" />
-                    <span className="text-sm font-medium text-slate-700">申請締切日</span>
+                    <span className="text-sm font-medium text-slate-700">期間</span>
                   </div>
-                  <p className={`pl-6 ${
-                    daysUntilDeadline !== null && daysUntilDeadline <= 7 && daysUntilDeadline >= 0 
-                      ? 'text-orange-600 font-semibold' 
-                      : 'text-slate-900'
-                  }`}>
-                    {format(new Date(subsidy.apply_end), 'yyyy年MM月dd日(E)', { locale: ja })}
-                    {daysUntilDeadline !== null && daysUntilDeadline >= 0 && (
-                      <span className="text-sm text-slate-500 ml-2">
-                        ({daysUntilDeadline === 0 ? '本日締切' : `あと${daysUntilDeadline}日`})
-                      </span>
-                    )}
-                  </p>
+                  <p className="text-slate-900 pl-6">{subsidy.period}</p>
                 </div>
               )}
             </div>

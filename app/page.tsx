@@ -7,9 +7,11 @@ import DashboardCard from '@/components/dashboard/DashboardCard'
 import TopicCarousel from '@/components/dashboard/TopicCarousel'
 import InfoItem from '@/components/dashboard/InfoItem'
 import LocalNewsCard from '@/components/dashboard/LocalNewsCard'
+import SubsidyDetailModal from '@/components/subsidies/SubsidyDetailModal'
+import LocalNewsDetailModal from '@/components/dashboard/LocalNewsDetailModal'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { Calendar, FileText, Archive, Settings, Shield } from 'lucide-react'
+import { Calendar, FileText, Archive, Settings, Shield, Eye, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { canAccessAdmin } from '@/lib/auth'
 
@@ -24,6 +26,10 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [canAccessAdminPanel, setCanAccessAdminPanel] = useState(false)
+  const [selectedSubsidy, setSelectedSubsidy] = useState<Subsidy | null>(null)
+  const [isSubsidyModalOpen, setIsSubsidyModalOpen] = useState(false)
+  const [selectedNews, setSelectedNews] = useState<LocalNews | null>(null)
+  const [isNewsModalOpen, setIsNewsModalOpen] = useState(false)
 
   useEffect(() => {
     fetchDashboardData()
@@ -41,6 +47,16 @@ export default function DashboardPage() {
       console.error('Error checking admin access:', error)
       setCanAccessAdminPanel(false)
     }
+  }
+
+  const showSubsidyDetail = (subsidy: Subsidy) => {
+    setSelectedSubsidy(subsidy)
+    setIsSubsidyModalOpen(true)
+  }
+
+  const showNewsDetail = (news: LocalNews) => {
+    setSelectedNews(news)
+    setIsNewsModalOpen(true)
   }
 
   const fetchDashboardData = async () => {
@@ -215,19 +231,28 @@ export default function DashboardPage() {
                           <span className="text-xs text-slate-500">
                             {subsidy.organization}
                           </span>
-                          {subsidy.url && (
-                            <a
-                              href={subsidy.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+                          <div className="flex items-center gap-2">
+                            {/* 詳細ボタン */}
+                            <button
+                              onClick={() => showSubsidyDetail(subsidy)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-xs font-medium transition-colors duration-200"
                             >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                              </svg>
+                              <Eye className="w-3 h-3" />
                               詳細
-                            </a>
-                          )}
+                            </button>
+                            {/* URLボタン */}
+                            {subsidy.url && (
+                              <a
+                                href={subsidy.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg text-xs font-medium transition-colors duration-200"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                URL
+                              </a>
+                            )}
+                          </div>
                         </div>
                       </div>
                       {subsidy.status && (
@@ -290,7 +315,80 @@ export default function DashboardPage() {
             )}
           </DashboardCard>
 
-          <LocalNewsCard />
+          {/* 地域ニュースカードを更新 */}
+          <DashboardCard
+            title="地域ニュース"
+            icon="📝"
+            linkText="すべて見る"
+            linkHref="/local-news"
+          >
+            {localNews.length > 0 ? (
+              <div className="space-y-4">
+                {localNews.map((news) => (
+                  <div key={news.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-lg">
+                            {getNewsCategoryIcon(news.category)}
+                          </span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getNewsCategoryColor(news.category)}`}>
+                            {news.category}
+                          </span>
+                        </div>
+                        <h4 className="font-semibold text-slate-900 text-sm mb-2 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2">
+                          {news.name}
+                        </h4>
+                        {news.summary && (
+                          <p className="text-slate-600 text-sm leading-relaxed line-clamp-2 mb-3">
+                            {news.summary}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs text-slate-500">
+                            <span>{news.prefecture} {news.municipality}</span>
+                            <span>•</span>
+                            <span>{new Date(news.created_at).toLocaleDateString('ja-JP')}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {/* 詳細ボタン */}
+                            <button
+                              onClick={() => showNewsDetail(news)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-xs font-medium transition-colors duration-200"
+                            >
+                              <Eye className="w-3 h-3" />
+                              詳細
+                            </button>
+                            {/* URLボタン */}
+                            {news.source_url && (
+                              <a
+                                href={news.source_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg text-xs font-medium transition-colors duration-200"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                URL
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 mx-auto mb-4 text-slate-300">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                  </svg>
+                </div>
+                <p className="text-slate-500 text-sm">地域ニュース情報はまだありません</p>
+              </div>
+            )}
+          </DashboardCard>
 
           {/* 3段目：3カラム */}
           <DashboardCard
@@ -501,6 +599,30 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* 補助金・助成金詳細モーダル */}
+      {selectedSubsidy && (
+        <SubsidyDetailModal
+          subsidy={selectedSubsidy}
+          isOpen={isSubsidyModalOpen}
+          onClose={() => {
+            setIsSubsidyModalOpen(false)
+            setSelectedSubsidy(null)
+          }}
+        />
+      )}
+
+      {/* 地域ニュース詳細モーダル */}
+      {selectedNews && (
+        <LocalNewsDetailModal
+          news={selectedNews}
+          isOpen={isNewsModalOpen}
+          onClose={() => {
+            setIsNewsModalOpen(false)
+            setSelectedNews(null)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -559,4 +681,32 @@ function getFileTypeIcon(fileName: string | null): string {
     case 'pptx': return '📽️'
     default: return '📄'
   }
+}
+
+function getNewsCategoryIcon(category: string): string {
+  const categoryIcons: Record<string, string> = {
+    '行政DX': '🏛️',
+    '教育・学習': '📚',
+    '防災・安全': '🚨',
+    '福祉・子育て': '👨‍👩‍👧‍👦',
+    '産業・ビジネス': '💼',
+    'イベント': '🎉',
+    '環境・暮らし': '🌱',
+    'その他': '📰'
+  }
+  return categoryIcons[category] || '📰'
+}
+
+function getNewsCategoryColor(category: string): string {
+  const categoryColors: Record<string, string> = {
+    '行政DX': 'bg-blue-100 text-blue-800 border-blue-200',
+    '教育・学習': 'bg-green-100 text-green-800 border-green-200',
+    '防災・安全': 'bg-red-100 text-red-800 border-red-200',
+    '福祉・子育て': 'bg-pink-100 text-pink-800 border-pink-200',
+    '産業・ビジネス': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    'イベント': 'bg-purple-100 text-purple-800 border-purple-200',
+    '環境・暮らし': 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    'その他': 'bg-gray-100 text-gray-800 border-gray-200'
+  }
+  return categoryColors[category] || 'bg-gray-100 text-gray-800 border-gray-200'
 }
