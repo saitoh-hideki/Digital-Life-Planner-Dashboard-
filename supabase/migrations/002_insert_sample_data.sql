@@ -13,10 +13,7 @@ INSERT INTO topics (headline, summary, source_name, source_url, published_at, is
   ('高齢者向けスマホ教室の成功事例', '福岡県の公民館で開催されたスマホ教室が好評。参加者の9割が「生活が便利になった」と回答。', '地域ニュース', 'https://example.com/news2', NOW() - INTERVAL '1 hour', true, '高齢者向けスマホ教室が地域で成功を収めています。'),
   ('地域アプリで買い物支援', '京都府の山間部で買い物支援アプリが導入。高齢者の買い物難民問題の解決に貢献。', '京都新聞', 'https://example.com/news3', NOW() - INTERVAL '2 hours', true, '買い物支援アプリが地域課題の解決に貢献しています。');
 
--- サンプル地域ニュース
-INSERT INTO local_news (prefecture, municipality, name, summary, body, source_name, published_at, status, tags) VALUES
-  ('東京都', '渋谷区', 'デジタル区役所の取り組み開始', '渋谷区が行政手続きの完全デジタル化を推進。2025年までに9割の手続きをオンライン化へ。', '渋谷区は本日、行政手続きのデジタル化推進計画を発表しました...', '渋谷区役所', NOW() - INTERVAL '1 day', 'published', ARRAY['行政DX', 'オンライン化']),
-  ('大阪府', '大阪市', 'シニア向けIT相談会を定期開催', '大阪市内の全区でシニア向けIT相談会を月2回開催。スマートフォンの使い方から行政サービスの利用まで幅広くサポート。', '大阪市は高齢者のデジタルデバイド解消に向けて...', '大阪市', NOW() - INTERVAL '2 days', 'published', ARRAY['シニア支援', 'デジタルデバイド']);
+-- サンプル地域ニュース（削除済み）
 
 -- サンプル補助金データ
 INSERT INTO subsidies (prefecture, municipality, name, summary, issuer, audience, url, apply_start, apply_end, status) VALUES

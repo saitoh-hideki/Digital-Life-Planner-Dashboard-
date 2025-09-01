@@ -6,7 +6,7 @@ import DetailModal from './DetailModal'
 
 interface SearchResultsProps {
   results: SearchResult[]
-  type: 'apps' | 'subsidies' | 'news'
+  type: 'apps' | 'subsidies' | 'news' | 'local-news'
   loading: boolean
   hasSearched: boolean
 }
@@ -38,6 +38,8 @@ export default function SearchResults({
         return <Gift className="w-6 h-6 text-green-500" />
       case 'news':
         return <Newspaper className="w-6 h-6 text-orange-500" />
+      case 'local-news':
+        return <Newspaper className="w-6 h-6 text-green-500" />
       default:
         return <Smartphone className="w-6 h-6 text-blue-500" />
     }
@@ -55,6 +57,8 @@ export default function SearchResults({
         return '一致する補助金が見つかりませんでした。条件を広げて再検索してください'
       case 'news':
         return '一致するニュースが見つかりませんでした'
+      case 'local-news':
+        return '一致する地域ニュースが見つかりませんでした'
       default:
         return '検索結果が見つかりませんでした'
     }
@@ -66,6 +70,23 @@ export default function SearchResults({
     if (result.prefecture) items.push({ icon: <MapPin className="w-4 h-4" />, text: result.prefecture, color: 'bg-blue-100 text-blue-700' })
     if (result.municipality) items.push({ icon: <Building2 className="w-4 h-4" />, text: result.municipality, color: 'bg-indigo-100 text-indigo-700' })
     if (result.source_name) items.push({ icon: <Newspaper className="w-4 h-4" />, text: result.source_name, color: 'bg-slate-100 text-slate-700' })
+    
+    // 地域ニュース用のカテゴリ表示
+    if (type === 'local-news' && result.metadata?.category) {
+      const category = result.metadata.category as string
+      const categoryColors: Record<string, string> = {
+        '行政DX': 'bg-blue-100 text-blue-700',
+        '教育・学習': 'bg-green-100 text-green-700',
+        '防災・安全': 'bg-red-100 text-red-700',
+        '福祉・子育て': 'bg-pink-100 text-pink-700',
+        '産業・ビジネス': 'bg-yellow-100 text-yellow-700',
+        'イベント': 'bg-purple-100 text-purple-700',
+        '環境・暮らし': 'bg-emerald-100 text-emerald-700',
+        'その他': 'bg-gray-100 text-gray-700'
+      }
+      const categoryColor = categoryColors[category] || 'bg-gray-100 text-gray-700'
+      items.push({ icon: <Newspaper className="w-4 h-4" />, text: category, color: categoryColor })
+    }
     
     if (type === 'subsidies' && result.metadata) {
       const applyEnd = result.metadata.apply_end

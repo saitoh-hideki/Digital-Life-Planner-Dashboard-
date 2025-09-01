@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { ActionTask, ActionCategory, DailySummary, MonthlySummary } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns'
-import { Calendar, Plus, ArrowLeft, Home, Heart } from 'lucide-react'
+import { Calendar, Plus, ArrowLeft, Home, Heart, Globe } from 'lucide-react'
 import Link from 'next/link'
 import ActionTimeTable from '@/components/actions/ActionTimeTable'
 import ActionForm from '@/components/actions/ActionForm'
@@ -12,6 +12,7 @@ import DailySummaryCard from '@/components/actions/DailySummaryCard'
 import MonthlySummaryCard from '@/components/actions/MonthlySummaryCard'
 import ConfettiEffect from '@/components/actions/ConfettiEffect'
 import SupporterSelector from '@/components/actions/SupporterSelector'
+import LocalNewsSettings from '@/components/actions/LocalNewsSettings'
 
 // 応援者の型定義（簡素化）
 interface Supporter {
@@ -35,6 +36,7 @@ export default function ActionsPage() {
   const [showConfetti, setShowConfetti] = useState(false)
   const [isSupporterSelectorOpen, setIsSupporterSelectorOpen] = useState(false)
   const [selectedSupporter, setSelectedSupporter] = useState<Supporter | null>(null)
+  const [isLocalNewsSettingsOpen, setIsLocalNewsSettingsOpen] = useState(false)
 
   // 応援者設定の初期化
   useEffect(() => {
@@ -315,6 +317,15 @@ export default function ActionsPage() {
           </div>
           
           <div className="flex items-center gap-3">
+            {/* 地域ニュース設定ボタン */}
+            <button
+              onClick={() => setIsLocalNewsSettingsOpen(true)}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors"
+            >
+              <Globe className="w-5 h-5" />
+              地域ニュース設定
+            </button>
+            
             {/* 応援者設定ボタン */}
             <button
               onClick={() => setIsSupporterSelectorOpen(true)}
@@ -396,6 +407,12 @@ export default function ActionsPage() {
         onClose={() => setIsSupporterSelectorOpen(false)}
         onSupporterChange={handleSupporterChange}
         currentSupporter={selectedSupporter}
+      />
+
+      {/* 地域ニュース設定モーダル */}
+      <LocalNewsSettings
+        isOpen={isLocalNewsSettingsOpen}
+        onClose={() => setIsLocalNewsSettingsOpen(false)}
       />
     </div>
   )

@@ -43,21 +43,26 @@ export interface Topic {
 }
 
 export interface LocalNews {
-  id?: number
+  id: string
   prefecture: string
-  municipality?: string
+  municipality: string
   name: string
   summary?: string
   body?: string
-  source_name?: string
   source_url?: string
-  tags?: string[]
-  published_at: string
-  status: 'draft' | 'published'
-  author_id?: string
-  created_at?: string
-  updated_at?: string
+  category: LocalNewsCategory
+  created_at: string
 }
+
+export type LocalNewsCategory = 
+  | '行政DX'
+  | '教育・学習'
+  | '防災・安全'
+  | '福祉・子育て'
+  | '産業・ビジネス'
+  | 'イベント'
+  | '環境・暮らし'
+  | 'その他'
 
 export interface AcademicCircleEvent {
   id: string

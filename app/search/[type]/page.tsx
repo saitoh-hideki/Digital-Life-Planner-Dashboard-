@@ -11,7 +11,7 @@ import SearchResults from '@/components/search/SearchResults'
 export default function SearchPage() {
   const params = useParams()
   const router = useRouter()
-  const searchType = params?.type as 'apps' | 'subsidies' | 'news'
+  const searchType = params?.type as 'apps' | 'subsidies' | 'news' | 'local-news'
   
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
@@ -31,6 +31,10 @@ export default function SearchPage() {
       
       if (searchType === 'news') {
         query = query.eq('status', 'published')
+      }
+      
+      if (searchType === 'local-news') {
+        // 新しい地域ニューステーブルはstatusカラムがないので条件を追加しない
       }
       
       const { data, error } = await query
@@ -69,6 +73,8 @@ export default function SearchPage() {
         return '補助金・助成金検索'
       case 'news':
         return '地域ニュース検索'
+      case 'local-news':
+        return '地域ニュース検索（新）'
       default:
         return '検索'
     }
@@ -82,6 +88,8 @@ export default function SearchPage() {
         return '地域の補助金・助成金情報を検索できます'
       case 'news':
         return '地域の最新ニュース・情報を検索できます'
+      case 'local-news':
+        return '全国各地のデジタル化・地域活性化に関する最新情報を検索できます'
       default:
         return '地域情報を検索できます'
     }
@@ -95,6 +103,8 @@ export default function SearchPage() {
         return <Gift className="w-8 h-8 text-green-500" />
       case 'news':
         return <Newspaper className="w-8 h-8 text-orange-500" />
+      case 'local-news':
+        return <Newspaper className="w-8 h-8 text-green-500" />
       default:
         return <Search className="w-8 h-8 text-blue-500" />
     }
@@ -107,6 +117,8 @@ export default function SearchPage() {
       case 'subsidies':
         return 'subsidies'
       case 'news':
+        return 'local_news'
+      case 'local-news':
         return 'local_news'
       default:
         return ''
@@ -121,6 +133,8 @@ export default function SearchPage() {
         return 'id' // updated_onカラムが存在しない場合はidでソート
       case 'news':
         return 'published_at'
+      case 'local-news':
+        return 'created_at'
       default:
         return 'id'
     }
@@ -141,6 +155,10 @@ export default function SearchPage() {
       
       if (searchType === 'news') {
         query = query.eq('status', 'published')
+      }
+      
+      if (searchType === 'local-news') {
+        // 新しい地域ニューステーブルはstatusカラムがないので条件を追加しない
       }
       
       if (params.prefecture) {

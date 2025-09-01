@@ -10,7 +10,7 @@ interface SearchFormProps {
     municipality: string
     keyword: string
   }) => void
-  searchType?: 'apps' | 'subsidies' | 'news'
+  searchType?: 'apps' | 'subsidies' | 'news' | 'local-news'
 }
 
 export default function SearchForm({ onSearch, searchType = 'apps' }: SearchFormProps) {
@@ -27,6 +27,8 @@ export default function SearchForm({ onSearch, searchType = 'apps' }: SearchForm
       case 'subsidies':
         return '都道府県・市区町村・キーワードで補助金・助成金を検索できます'
       case 'news':
+        return '都道府県・市区町村・キーワードで地域ニュースを検索できます'
+      case 'local-news':
         return '都道府県・市区町村・キーワードで地域ニュースを検索できます'
       default:
         return '都道府県・市区町村・キーワードで地域情報を検索できます'

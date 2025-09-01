@@ -6,6 +6,7 @@ import { Topic, LocalApp, Subsidy, LocalNews, AcademicCircleEvent, LocalMediaKno
 import DashboardCard from '@/components/dashboard/DashboardCard'
 import TopicCarousel from '@/components/dashboard/TopicCarousel'
 import InfoItem from '@/components/dashboard/InfoItem'
+import LocalNewsCard from '@/components/dashboard/LocalNewsCard'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Calendar, FileText, Archive, Settings } from 'lucide-react'
@@ -247,39 +248,7 @@ export default function DashboardPage() {
             )}
           </DashboardCard>
 
-          <DashboardCard
-            title="地域ニュース"
-            icon="📝"
-            linkText="検索へ"
-            linkHref="/search/news"
-          >
-            {localNews.length > 0 ? (
-              <div className="space-y-4">
-                {localNews.map((news) => (
-                  <InfoItem
-                    key={news.id}
-                    title={news.name}
-                    description={news.summary}
-                    metadata={[
-                      news.source_name || '',
-                      news.prefecture
-                    ].filter(Boolean)}
-                    badge={news.tags?.[0] || 'ニュース'}
-                    badgeColor="purple"
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 mx-auto mb-4 text-slate-300">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-                  </svg>
-                </div>
-                <p className="text-slate-500 text-sm">地域ニュースはまだありません</p>
-              </div>
-            )}
-          </DashboardCard>
+          <LocalNewsCard />
 
           {/* 3段目：3カラム */}
           <DashboardCard
