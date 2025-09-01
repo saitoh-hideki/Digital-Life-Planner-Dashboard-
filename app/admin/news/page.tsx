@@ -1,39 +1,45 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { LocalNews } from '@/lib/types'
-import { Newspaper, Plus, Edit, Trash2, Save, X, MapPin, Tag } from 'lucide-react'
-import Link from 'next/link'
+import { LocalNews, LocalNewsCategory } from '@/lib/types'
+import { Upload, Download, Plus, Edit, Trash2, Database, FileText, CheckCircle, AlertCircle } from 'lucide-react'
 
-interface NewsFormData {
-  name: string
-  summary: string
-  source_name: string
-  prefecture: string
-  tags: string
-}
+const NEWS_CATEGORIES: LocalNewsCategory[] = [
+  '行政DX',
+  '教育・学習',
+  '防災・安全',
+  '福祉・子育て',
+  '産業・ビジネス',
+  'イベント',
+  '環境・暮らし',
+  'その他'
+]
 
-export default function NewsAdminPage() {
+export default function AdminNewsPage() {
   const [news, setNews] = useState<LocalNews[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isEditing, setIsEditing] = useState<number | null>(null)
-  const [formData, setFormData] = useState<NewsFormData>({
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [csvFile, setCsvFile] = useState<File | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [editingNews, setEditingNews] = useState<LocalNews | null>(null)
+  const [formData, setFormData] = useState({
+    prefecture: '',
+    municipality: '',
     name: '',
     summary: '',
-    source_name: '',
-    prefecture: '',
-    tags: ''
+    body: '',
+    source_url: '',
+    category: 'その他' as LocalNewsCategory
   })
 
   useEffect(() => {
-    fetchNews()
+    loadData()
   }, [])
 
-  const fetchNews = async () => {
+  const loadData = async () => {
+    setLoading(true)
     try {
-      setError(null)
       const { data, error } = await supabase
         .from('local_news')
         .select('*')
@@ -42,404 +48,528 @@ export default function NewsAdminPage() {
       if (error) throw error
       setNews(data || [])
     } catch (error) {
-      console.error('Error fetching news:', error)
-      setError('データの取得中にエラーが発生しました')
+      console.error('Error loading data:', error)
+      setMessage({ type: 'error', text: 'データの読み込みに失敗しました' })
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!file.name.endsWith('.csv')) {
+      setMessage({ type: 'error', text: 'CSVファイルを選択してください' })
+      return
+    }
+
+    setCsvFile(file)
+  }
+
+  const importCSV = async () => {
+    if (!csvFile) return
+
+    setLoading(true)
     try {
-      setError(null)
+      const text = await csvFile.text()
+      const lines = text.split('\n')
       
-      // タグを配列に変換
-      const tagsArray = formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : []
+      if (lines.length < 2) {
+        throw new Error('CSVファイルが空またはヘッダーのみです')
+      }
+
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
+      const expectedHeaders = ['prefecture', 'municipality', 'name', 'summary', 'body', 'source_url', 'category']
       
-      if (isEditing) {
+      // ヘッダー検証
+      if (!expectedHeaders.every(h => headers.includes(h))) {
+        throw new Error('CSVのヘッダーが期待される形式と一致しません')
+      }
+
+      const records: Partial<LocalNews>[] = []
+      
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim()
+        if (!line) continue
+
+        const values = line.split(',').map(v => v.trim().replace(/"/g, ''))
+        if (values.length < headers.length) continue
+
+        const record: Partial<LocalNews> = {
+          prefecture: values[0] || '',
+          municipality: values[1] || undefined,
+          name: values[2] || '',
+          summary: values[3] || undefined,
+          body: values[4] || undefined,
+          source_url: values[5] || undefined,
+          category: (values[6] as LocalNewsCategory) || 'その他'
+        }
+
+        // nameが空のレコードはスキップ
+        if (!record.name || !record.prefecture) continue
+
+        records.push(record)
+      }
+
+      if (records.length === 0) {
+        throw new Error('有効なデータが見つかりませんでした')
+      }
+
+      // データベースに挿入
+      const { error: insertError } = await supabase
+        .from('local_news')
+        .insert(records)
+
+      if (insertError) throw insertError
+
+      setMessage({ type: 'success', text: `${records.length}件のデータをインポートしました` })
+      setCsvFile(null)
+      
+      // データを再読み込み
+      await loadData()
+      
+    } catch (error) {
+      console.error('CSV import error:', error)
+      const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました'
+      setMessage({ type: 'error', text: `CSVインポートに失敗しました: ${errorMessage}` })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      if (editingNews) {
         // 更新
         const { error } = await supabase
           .from('local_news')
           .update({
-            name: formData.name,
-            summary: formData.summary,
-            source_name: formData.source_name,
-            prefecture: formData.prefecture,
-            tags: tagsArray
+            ...formData,
+            updated_at: new Date().toISOString()
           })
-          .eq('id', isEditing)
+          .eq('id', editingNews.id)
 
         if (error) throw error
+        setMessage({ type: 'success', text: 'ニュースを更新しました' })
       } else {
         // 新規作成
         const { error } = await supabase
           .from('local_news')
-          .insert([{
-            name: formData.name,
-            summary: formData.summary,
-            source_name: formData.source_name,
-            prefecture: formData.prefecture,
-            tags: tagsArray
-          }])
+          .insert([formData])
 
         if (error) throw error
+        setMessage({ type: 'success', text: 'ニュースを追加しました' })
       }
 
-      // フォームをリセット
-      setFormData({ name: '', summary: '', source_name: '', prefecture: '', status: 'draft', tags: '' })
-      setIsEditing(null)
-      
-      // データを再取得
-      await fetchNews()
+      setShowForm(false)
+      setEditingNews(null)
+      resetForm()
+      await loadData()
     } catch (error) {
       console.error('Error saving news:', error)
-      setError('データの保存中にエラーが発生しました')
+      setMessage({ type: 'error', text: 'ニュースの保存に失敗しました' })
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleEdit = (item: LocalNews) => {
-    setIsEditing(item.id)
+  const handleEdit = (newsItem: LocalNews) => {
+    setEditingNews(newsItem)
     setFormData({
-      name: item.name || '',
-      summary: item.summary || '',
-      source_name: item.source_name || '',
-      prefecture: item.prefecture || '',
-      status: item.status || 'draft',
-      tags: Array.isArray(item.tags) ? item.tags.join(', ') : ''
+      prefecture: newsItem.prefecture || '',
+      municipality: newsItem.municipality || '',
+      name: newsItem.name || '',
+      summary: newsItem.summary || '',
+      body: newsItem.body || '',
+      source_url: newsItem.source_url || '',
+      category: newsItem.category || 'その他'
     })
+    setShowForm(true)
   }
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('このニュースを削除しますか？')) return
 
     try {
-      setError(null)
       const { error } = await supabase
         .from('local_news')
         .delete()
         .eq('id', id)
 
       if (error) throw error
-      
-      await fetchNews()
+
+      setMessage({ type: 'success', text: 'ニュースを削除しました' })
+      await loadData()
     } catch (error) {
       console.error('Error deleting news:', error)
-      setError('データの削除中にエラーが発生しました')
+      setMessage({ type: 'error', text: 'ニュースの削除に失敗しました' })
     }
   }
 
-  const handleCancel = () => {
-    setIsEditing(null)
-    setFormData({ name: '', summary: '', source_name: '', prefecture: '', status: 'draft', tags: '' })
+  const resetForm = () => {
+    setFormData({
+      prefecture: '',
+      municipality: '',
+      name: '',
+      summary: '',
+      body: '',
+      source_url: '',
+      category: 'その他'
+    })
   }
 
-  const getStatusBadge = (status: string | null) => {
-    switch (status) {
-      case 'published':
-        return { text: '公開', color: 'bg-green-100 text-green-800' }
-      case 'draft':
-        return { text: '下書き', color: 'bg-yellow-100 text-yellow-800' }
-      case 'archived':
-        return { text: 'アーカイブ', color: 'bg-gray-100 text-gray-800' }
-      default:
-        return { text: '未設定', color: 'bg-slate-100 text-slate-800' }
-    }
-  }
+  const exportCSV = () => {
+    const headers = ['prefecture', 'municipality', 'name', 'summary', 'body', 'source_url', 'category']
+    const csvContent = [
+      headers.join(','),
+      ...news.map(item => [
+        item.prefecture,
+        item.municipality || '',
+        item.name,
+        item.summary || '',
+        item.body || '',
+        item.source_url || '',
+        item.category
+      ].join(','))
+    ].join('\n')
 
-  const prefectures = [
-    '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
-    '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
-    '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県',
-    '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県',
-    '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県',
-    '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県',
-    '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'
-  ]
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <div className="text-slate-500">読み込み中...</div>
-        </div>
-      </div>
-    )
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = 'local_news.csv'
+    link.click()
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">地域ニュース管理</h1>
-          <p className="text-slate-600 mt-2">地域のニュース情報を管理します</p>
+    <div className="min-h-screen bg-slate-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">地域ニュース管理</h1>
+          <p className="text-slate-600">地域のデジタル化関連ニュースの管理</p>
         </div>
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-          </svg>
-          ダッシュボードに戻る
-        </Link>
-      </div>
 
-      {/* フォーム */}
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
-        <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
-          <Newspaper className="w-5 h-5" />
-          {isEditing ? 'ニュース記事を編集' : '新しいニュース記事を追加'}
-        </h2>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              記事タイトル *
-            </label>
+        {/* Message */}
+        {message && (
+          <div className={`mb-6 p-4 rounded-lg border ${
+            message.type === 'success' 
+              ? 'bg-green-50 border-green-200 text-green-800' 
+              : 'bg-red-50 border-red-200 text-red-800'
+          }`}>
+            <div className="flex items-center gap-2">
+              {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+              {message.text}
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* CSV Upload */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Upload className="w-5 h-5 text-blue-600" />
+              </div>
+              <h3 className="font-semibold text-slate-900">CSVインポート</h3>
+            </div>
+            
             <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="例: 横浜市、DX推進で新サービス開始"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              type="file"
+              accept=".csv"
+              onChange={handleFileUpload}
+              className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-3"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              記事概要 *
-            </label>
-            <textarea
-              required
-              value={formData.summary}
-              onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
-              placeholder="記事の内容を簡潔に説明"
-              rows={3}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                出典名
-              </label>
-              <input
-                type="text"
-                value={formData.source_name}
-                onChange={(e) => setFormData({ ...formData, source_name: e.target.value })}
-                placeholder="例: 横浜市役所、地域メディア"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
             
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                都道府県
-              </label>
-              <select
-                value={formData.prefecture}
-                onChange={(e) => setFormData({ ...formData, prefecture: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">都道府県を選択</option>
-                {prefectures.map((pref) => (
-                  <option key={pref} value={pref}>{pref}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                ステータス
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="draft">下書き</option>
-                <option value="published">公開</option>
-                <option value="archived">アーカイブ</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                タグ（カンマ区切り）
-              </label>
-              <input
-                type="text"
-                value={formData.tags}
-                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                placeholder="例: 行政DX, シニア支援, 地域活性化"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 pt-4">
-            <button
-              type="submit"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors duration-200"
-            >
-              {isEditing ? (
-                <>
-                  <Save className="w-4 h-4" />
-                  更新
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  追加
-                </>
-              )}
-            </button>
-            
-            {isEditing && (
+            {csvFile && (
               <button
-                type="button"
-                onClick={handleCancel}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-300 transition-colors duration-200"
+                onClick={importCSV}
+                disabled={loading}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <X className="w-4 h-4" />
-                キャンセル
+                {loading ? 'インポート中...' : 'インポート実行'}
               </button>
             )}
           </div>
-        </form>
-      </div>
 
-      {/* エラーメッセージ */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-          <div className="flex items-center gap-2 text-red-800">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-            <span className="font-medium">{error}</span>
+          {/* Manual Add */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <Plus className="w-5 h-5 text-green-600" />
+              </div>
+              <h3 className="font-semibold text-slate-900">手動追加</h3>
+            </div>
+            
+            <p className="text-sm text-slate-600 mb-4">
+              新しいニュースを手動で追加
+            </p>
+            
+            <button
+              onClick={() => {
+                setShowForm(true)
+                setEditingNews(null)
+                resetForm()
+              }}
+              disabled={loading}
+              className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              追加
+            </button>
+          </div>
+
+          {/* CSV Export */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Download className="w-5 h-5 text-purple-600" />
+              </div>
+              <h3 className="font-semibold text-slate-900">CSV出力</h3>
+            </div>
+            
+            <p className="text-sm text-slate-600 mb-4">
+              現在のデータをCSVで出力
+            </p>
+            
+            <button
+              onClick={exportCSV}
+              disabled={loading || news.length === 0}
+              className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              出力
+            </button>
+          </div>
+
+          {/* Refresh */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                <Database className="w-5 h-5 text-slate-600" />
+              </div>
+              <h3 className="font-semibold text-slate-900">更新</h3>
+            </div>
+            
+            <p className="text-sm text-slate-600 mb-4">
+              データを再読み込み
+            </p>
+            
+            <button
+              onClick={loadData}
+              disabled={loading}
+              className="w-full bg-slate-600 text-white py-2 px-4 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              更新
+            </button>
           </div>
         </div>
-      )}
 
-      {/* ニュース一覧 */}
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200">
-        <div className="px-6 py-4 border-b border-slate-200">
-          <h2 className="text-xl font-semibold text-slate-900">ニュース一覧</h2>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  タイトル
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  概要
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  出典
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  地域
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  ステータス
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  タグ
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  操作
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
-              {news.map((item) => {
-                const statusBadge = getStatusBadge(item.status)
-                return (
+        {/* Data Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+          <div className="p-6 border-b border-slate-200">
+            <div className="flex items-center gap-3">
+              <FileText className="w-5 h-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-slate-900">地域ニュース一覧</h3>
+              <span className="text-sm text-slate-500">({news.length}件)</span>
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto max-h-96 overflow-y-auto">
+            <table className="w-full">
+              <thead className="bg-slate-50 sticky top-0 z-10">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">地域</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">タイトル</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">概要</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">カテゴリ</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">作成日</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">操作</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-200">
+                {news.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      {item.id}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-slate-900">{item.prefecture}</div>
+                      {item.municipality && (
+                        <div className="text-sm text-slate-500">{item.municipality}</div>
+                      )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                      {item.name || '-'}
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-slate-900">{item.name}</div>
+                      {item.source_url && (
+                        <div className="text-sm text-slate-500">出典: <a href={item.source_url} target="_blank" rel="noopener noreferrer" className="underline">{item.source_url}</a></div>
+                      )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-900 max-w-xs">
-                      <div className="truncate" title={item.summary}>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-slate-900 max-w-xs truncate">
                         {item.summary || '-'}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      {item.source_name || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      {item.prefecture || '-'}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadge.color}`}>
-                        {statusBadge.text}
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        {item.category}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-900 max-w-xs">
-                      {Array.isArray(item.tags) && item.tags.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {item.tags.slice(0, 3).map((tag, index) => (
-                            <span
-                              key={index}
-                              className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                          {item.tags.length > 3 && (
-                            <span className="text-xs text-slate-500">+{item.tags.length - 3}</span>
-                          )}
-                        </div>
-                      ) : (
-                        '-'
-                      )}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                      {item.created_at ? new Date(item.created_at).toLocaleDateString('ja-JP') : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleEdit(item)}
-                          className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50"
-                          title="編集"
+                          className="text-indigo-600 hover:text-indigo-900"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(item.id)}
-                          className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"
-                          title="削除"
+                          className="text-red-600 hover:text-red-900"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-        
-        {news.length === 0 && (
-          <div className="text-center py-12">
-            <Newspaper className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500 text-lg">地域ニュースはまだありません</p>
-            <p className="text-slate-400 text-sm mt-2">新しいニュース記事を追加してください</p>
+
+        {/* Form Modal */}
+        {showForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">
+                {editingNews ? 'ニュースを編集' : '新しいニュースを追加'}
+              </h3>
+              
+              <form onSubmit={handleFormSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      都道府県 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.prefecture}
+                      onChange={(e) => setFormData({ ...formData, prefecture: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="例: 東京都"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      市区町村
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.municipality}
+                      onChange={(e) => setFormData({ ...formData, municipality: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="例: 渋谷区"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    タイトル <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="ニュースのタイトル"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    概要
+                  </label>
+                  <textarea
+                    value={formData.summary}
+                    onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="ニュースの概要"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    本文
+                  </label>
+                  <textarea
+                    value={formData.body}
+                    onChange={(e) => setFormData({ ...formData, body: e.target.value })}
+                    rows={5}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="ニュースの詳細内容"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      カテゴリ
+                    </label>
+                    <select
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value as LocalNewsCategory })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {NEWS_CATEGORIES.map(category => (
+                        <option key={category} value={category}>{category}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      出典URL
+                    </label>
+                    <input
+                      type="url"
+                      value={formData.source_url}
+                      onChange={(e) => setFormData({ ...formData, source_url: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="https://example.com"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForm(false)
+                      setEditingNews(null)
+                      resetForm()
+                    }}
+                    className="px-4 py-2 text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {loading ? '保存中...' : (editingNews ? '更新' : '追加')}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
       </div>

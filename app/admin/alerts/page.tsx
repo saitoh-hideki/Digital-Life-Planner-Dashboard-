@@ -234,7 +234,7 @@ export default function AlertsAdminPage() {
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-96 overflow-y-auto">
             {filteredAlerts.map((alert) => (
               <div
                 key={alert.id}

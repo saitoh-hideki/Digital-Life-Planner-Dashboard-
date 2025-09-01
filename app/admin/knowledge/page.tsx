@@ -324,9 +324,9 @@ export default function KnowledgeAdminPage() {
           <h2 className="text-xl font-semibold text-slate-900">ナレッジ一覧</h2>
         </div>
         
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-96 overflow-y-auto">
           <table className="w-full">
-            <thead className="bg-slate-50">
+            <thead className="bg-slate-50 sticky top-0 z-10">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   ID

@@ -1,27 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { AcademicCircleEvent } from '@/lib/types'
-import { GraduationCap, Plus, Edit, Trash2, Save, X, Calendar, Clock } from 'lucide-react'
-import Link from 'next/link'
+import { Upload, Download, Plus, Edit, Trash2, Database, FileText, CheckCircle, AlertCircle, Calendar } from 'lucide-react'
 
-interface EventFormData {
-  event_date: string
-  day_of_week: string
-  start_time: string
-  end_time: string
-  event_category: string
-  event_name: string
-  delivery_type: string
-}
-
-export default function EventsAdminPage() {
+export default function AdminEventsPage() {
   const [events, setEvents] = useState<AcademicCircleEvent[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isEditing, setIsEditing] = useState<string | null>(null)
-  const [formData, setFormData] = useState<EventFormData>({
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [csvFile, setCsvFile] = useState<File | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<AcademicCircleEvent | null>(null)
+  const [formData, setFormData] = useState({
     event_date: '',
     day_of_week: '',
     start_time: '',
@@ -32,12 +23,12 @@ export default function EventsAdminPage() {
   })
 
   useEffect(() => {
-    fetchEvents()
+    loadData()
   }, [])
 
-  const fetchEvents = async () => {
+  const loadData = async () => {
+    setLoading(true)
     try {
-      setError(null)
       const { data, error } = await supabase
         .from('academic_circle_events')
         .select('*')
@@ -47,20 +38,102 @@ export default function EventsAdminPage() {
       if (error) throw error
       setEvents(data || [])
     } catch (error) {
-      console.error('Error fetching events:', error)
-      setError('データの取得中にエラーが発生しました')
+      console.error('Error loading data:', error)
+      setMessage({ type: 'error', text: 'データの読み込みに失敗しました' })
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!file.name.endsWith('.csv')) {
+      setMessage({ type: 'error', text: 'CSVファイルを選択してください' })
+      return
+    }
+
+    setCsvFile(file)
+  }
+
+  const importCSV = async () => {
+    if (!csvFile) return
+
+    setLoading(true)
     try {
-      setError(null)
+      const text = await csvFile.text()
+      const lines = text.split('\n')
       
-      if (isEditing) {
+      if (lines.length < 2) {
+        throw new Error('CSVファイルが空またはヘッダーのみです')
+      }
+
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
+      const expectedHeaders = ['event_date', 'day_of_week', 'start_time', 'end_time', 'event_category', 'event_name', 'delivery_type']
+      
+      // ヘッダー検証
+      if (!expectedHeaders.every(h => headers.includes(h))) {
+        throw new Error('CSVのヘッダーが期待される形式と一致しません')
+      }
+
+      const records: Partial<AcademicCircleEvent>[] = []
+      
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim()
+        if (!line) continue
+
+        const values = line.split(',').map(v => v.trim().replace(/"/g, ''))
+        if (values.length < headers.length) continue
+
+        const record: Partial<AcademicCircleEvent> = {
+          event_date: values[0] || '',
+          day_of_week: values[1] || '',
+          start_time: values[2] || '',
+          end_time: values[3] || '',
+          event_category: values[4] || '',
+          event_name: values[5] || '',
+          delivery_type: values[6] || ''
+        }
+
+        // 必須フィールドの検証
+        if (!record.event_date || !record.event_name) continue
+
+        records.push(record)
+      }
+
+      if (records.length === 0) {
+        throw new Error('有効なデータが見つかりませんでした')
+      }
+
+      // データベースに挿入
+      const { error: insertError } = await supabase
+        .from('academic_circle_events')
+        .insert(records)
+
+      if (insertError) throw insertError
+
+      setMessage({ type: 'success', text: `${records.length}件のデータをインポートしました` })
+      setCsvFile(null)
+      
+      // データを再読み込み
+      await loadData()
+      
+    } catch (error) {
+      console.error('CSV import error:', error)
+      const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました'
+      setMessage({ type: 'error', text: `CSVインポートに失敗しました: ${errorMessage}` })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      if (editingEvent) {
         // 更新
         const { error } = await supabase
           .from('academic_circle_events')
@@ -68,9 +141,10 @@ export default function EventsAdminPage() {
             ...formData,
             updated_at: new Date().toISOString()
           })
-          .eq('id', isEditing)
+          .eq('id', editingEvent.id)
 
         if (error) throw error
+        setMessage({ type: 'success', text: 'イベントを更新しました' })
       } else {
         // 新規作成
         const { error } = await supabase
@@ -78,62 +152,55 @@ export default function EventsAdminPage() {
           .insert([formData])
 
         if (error) throw error
+        setMessage({ type: 'success', text: 'イベントを追加しました' })
       }
 
-      // フォームをリセット
-      setFormData({
-        event_date: '',
-        day_of_week: '',
-        start_time: '',
-        end_time: '',
-        event_category: '',
-        event_name: '',
-        delivery_type: ''
-      })
-      setIsEditing(null)
-      
-      // データを再取得
-      await fetchEvents()
+      setShowForm(false)
+      setEditingEvent(null)
+      resetForm()
+      await loadData()
     } catch (error) {
       console.error('Error saving event:', error)
-      setError('データの保存中にエラーが発生しました')
+      setMessage({ type: 'error', text: 'イベントの保存に失敗しました' })
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleEdit = (item: AcademicCircleEvent) => {
-    setIsEditing(item.id)
+  const handleEdit = (event: AcademicCircleEvent) => {
+    setEditingEvent(event)
     setFormData({
-      event_date: item.event_date,
-      day_of_week: item.day_of_week,
-      start_time: item.start_time,
-      end_time: item.end_time,
-      event_category: item.event_category,
-      event_name: item.event_name,
-      delivery_type: item.delivery_type
+      event_date: event.event_date || '',
+      day_of_week: event.day_of_week || '',
+      start_time: event.start_time || '',
+      end_time: event.end_time || '',
+      event_category: event.event_category || '',
+      event_name: event.event_name || '',
+      delivery_type: event.delivery_type || ''
     })
+    setShowForm(true)
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm('このイベントを削除しますか？')) return
 
     try {
-      setError(null)
       const { error } = await supabase
         .from('academic_circle_events')
         .delete()
         .eq('id', id)
 
       if (error) throw error
-      
-      await fetchEvents()
+
+      setMessage({ type: 'success', text: 'イベントを削除しました' })
+      await loadData()
     } catch (error) {
       console.error('Error deleting event:', error)
-      setError('データの削除中にエラーが発生しました')
+      setMessage({ type: 'error', text: 'イベントの削除に失敗しました' })
     }
   }
 
-  const handleCancel = () => {
-    setIsEditing(null)
+  const resetForm = () => {
     setFormData({
       event_date: '',
       day_of_week: '',
@@ -145,322 +212,354 @@ export default function EventsAdminPage() {
     })
   }
 
-  const getEventStatus = (eventDate: string | null, startTime: string | null) => {
-    if (!eventDate) return { text: '未設定', color: 'bg-gray-100 text-gray-800' }
-    
-    const now = new Date()
-    const eventDateTime = new Date(`${eventDate}T${startTime || '00:00'}`)
-    
-    if (now > eventDateTime) return { text: '終了', color: 'bg-gray-100 text-gray-800' }
-    if (now >= eventDateTime) return { text: '開催中', color: 'bg-green-100 text-green-800' }
-    if (eventDateTime.getTime() - now.getTime() <= 7 * 24 * 60 * 60 * 1000) return { text: '開催間近', color: 'bg-orange-100 text-orange-800' }
-    return { text: '予定', color: 'bg-blue-100 text-blue-800' }
+  const exportCSV = () => {
+    const headers = ['event_date', 'day_of_week', 'start_time', 'end_time', 'event_category', 'event_name', 'delivery_type']
+    const csvContent = [
+      headers.join(','),
+      ...events.map(event => [
+        event.event_date,
+        event.day_of_week,
+        event.start_time,
+        event.end_time,
+        event.event_category,
+        event.event_name,
+        event.delivery_type
+      ].join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = 'academic_circle_events.csv'
+    link.click()
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <div className="text-slate-500">読み込み中...</div>
-        </div>
-      </div>
-    )
+  const getDayOfWeek = (dateString: string) => {
+    const date = new Date(dateString)
+    const days = ['日', '月', '火', '水', '木', '金', '土']
+    return days[date.getDay()]
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">アカデミックサークルイベント管理</h1>
-          <p className="text-slate-600 mt-2">地域のアカデミックサークルイベントを管理します</p>
+    <div className="min-h-screen bg-slate-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">アカデミックサークルイベント管理</h1>
+          <p className="text-slate-600">DLP関連イベントの管理</p>
         </div>
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-          </svg>
-          ダッシュボードに戻る
-        </Link>
-      </div>
 
-      {/* フォーム */}
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
-        <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
-          <GraduationCap className="w-5 h-5" />
-          {isEditing ? 'イベント情報を編集' : '新しいイベントを追加'}
-        </h2>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                イベント日 *
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.event_date}
-                onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                曜日 *
-              </label>
-              <select
-                required
-                value={formData.day_of_week}
-                onChange={(e) => setFormData({ ...formData, day_of_week: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">選択してください</option>
-                <option value="日">日</option>
-                <option value="月">月</option>
-                <option value="火">火</option>
-                <option value="水">水</option>
-                <option value="木">木</option>
-                <option value="金">金</option>
-                <option value="土">土</option>
-              </select>
+        {/* Message */}
+        {message && (
+          <div className={`mb-6 p-4 rounded-lg border ${
+            message.type === 'success' 
+              ? 'bg-green-50 border-green-200 text-green-800' 
+              : 'bg-red-50 border-red-200 text-red-800'
+          }`}>
+            <div className="flex items-center gap-2">
+              {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+              {message.text}
             </div>
           </div>
+        )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                開始時間 *
-              </label>
-              <input
-                type="time"
-                required
-                value={formData.start_time}
-                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+        {/* Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* CSV Upload */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Upload className="w-5 h-5 text-blue-600" />
+              </div>
+              <h3 className="font-semibold text-slate-900">CSVインポート</h3>
             </div>
             
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                終了時間
-              </label>
-              <input
-                type="time"
-                value={formData.end_time}
-                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              イベントカテゴリ *
-            </label>
             <input
-              type="text"
-              required
-              value={formData.event_category}
-              onChange={(e) => setFormData({ ...formData, event_category: e.target.value })}
-              placeholder="例: Apple活用講座, AIリテラシー講座"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              type="file"
+              accept=".csv"
+              onChange={handleFileUpload}
+              className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-3"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              イベント名 *
-            </label>
-            <textarea
-              required
-              value={formData.event_name}
-              onChange={(e) => setFormData({ ...formData, event_name: e.target.value })}
-              placeholder="イベントの詳細な説明"
-              rows={3}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              配信方法
-            </label>
-            <select
-              value={formData.delivery_type}
-              onChange={(e) => setFormData({ ...formData, delivery_type: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">選択してください</option>
-              <option value="オンライン">オンライン</option>
-              <option value="オフライン">オフライン</option>
-              <option value="ハイブリッド">ハイブリッド</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-3 pt-4">
-            <button
-              type="submit"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors duration-200"
-            >
-              {isEditing ? (
-                <>
-                  <Save className="w-4 h-4" />
-                  更新
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  追加
-                </>
-              )}
-            </button>
             
-            {isEditing && (
+            {csvFile && (
               <button
-                type="button"
-                onClick={handleCancel}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-300 transition-colors duration-200"
+                onClick={importCSV}
+                disabled={loading}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <X className="w-4 h-4" />
-                キャンセル
+                {loading ? 'インポート中...' : 'インポート実行'}
               </button>
             )}
           </div>
-        </form>
-      </div>
 
-      {/* エラーメッセージ */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-          <div className="flex items-center gap-2 text-red-800">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-            <span className="font-medium">{error}</span>
+          {/* Manual Add */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <Plus className="w-5 h-5 text-green-600" />
+              </div>
+              <h3 className="font-semibold text-slate-900">手動追加</h3>
+            </div>
+            
+            <p className="text-sm text-slate-600 mb-4">
+              新しいイベントを手動で追加
+            </p>
+            
+            <button
+              onClick={() => {
+                setShowForm(true)
+                setEditingEvent(null)
+                resetForm()
+              }}
+              disabled={loading}
+              className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              追加
+            </button>
+          </div>
+
+          {/* CSV Export */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Download className="w-5 h-5 text-purple-600" />
+              </div>
+              <h3 className="font-semibold text-slate-900">CSV出力</h3>
+            </div>
+            
+            <p className="text-sm text-slate-600 mb-4">
+              現在のデータをCSVで出力
+            </p>
+            
+            <button
+              onClick={exportCSV}
+              disabled={loading || events.length === 0}
+              className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              出力
+            </button>
+          </div>
+
+          {/* Refresh */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                <Database className="w-5 h-5 text-slate-600" />
+              </div>
+              <h3 className="font-semibold text-slate-900">更新</h3>
+            </div>
+            
+            <p className="text-sm text-slate-600 mb-4">
+              データを再読み込み
+            </p>
+            
+            <button
+              onClick={loadData}
+              disabled={loading}
+              className="w-full bg-slate-600 text-white py-2 px-4 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              更新
+            </button>
           </div>
         </div>
-      )}
 
-      {/* イベント一覧 */}
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200">
-        <div className="px-6 py-4 border-b border-slate-200">
-          <h2 className="text-xl font-semibold text-slate-900">イベント一覧</h2>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  イベント日
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  曜日
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  開始時間
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  終了時間
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  イベントカテゴリ
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  イベント名
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  配信方法
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  ステータス
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  操作
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
-              {events.map((item) => {
-                const status = getEventStatus(item.event_date, item.start_time)
-                return (
-                  <tr key={item.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      {item.id}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4 text-slate-400" />
-                        {item.event_date}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                        {item.day_of_week}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-4 h-4 text-slate-400" />
-                        {item.start_time}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      {item.end_time || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      {item.event_category}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-900 max-w-xs">
-                      <div className="truncate" title={item.event_name}>
-                        {item.event_name}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      {item.delivery_type || '-'}
+        {/* Data Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+          <div className="p-6 border-b border-slate-200">
+            <div className="flex items-center gap-3">
+              <FileText className="w-5 h-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-slate-900">イベント一覧</h3>
+              <span className="text-sm text-slate-500">({events.length}件)</span>
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto max-h-96 overflow-y-auto">
+            <table className="w-full">
+              <thead className="bg-slate-50 sticky top-0 z-10">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">日付</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">時間</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">イベント名</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">カテゴリ</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">配信形式</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">操作</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-200">
+                {events.map((event) => (
+                  <tr key={event.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-slate-900">{event.event_date}</div>
+                      <div className="text-sm text-slate-500">{event.day_of_week || getDayOfWeek(event.event_date)}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
-                        {status.text}
+                      <div className="text-sm text-slate-900">
+                        {event.start_time} - {event.end_time}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-slate-900">{event.event_name}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {event.event_category || '未分類'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                      {event.delivery_type || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleEdit(item)}
-                          className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50"
-                          title="編集"
+                          onClick={() => handleEdit(event)}
+                          className="text-indigo-600 hover:text-indigo-900"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(item.id)}
-                          className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"
-                          title="削除"
+                          onClick={() => handleDelete(event.id)}
+                          className="text-red-600 hover:text-red-900"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-        
-        {events.length === 0 && (
-          <div className="text-center py-12">
-            <GraduationCap className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500 text-lg">アカデミックサークルイベントはまだありません</p>
-            <p className="text-slate-400 text-sm mt-2">新しいイベントを追加してください</p>
+
+        {/* Form Modal */}
+        {showForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">
+                {editingEvent ? 'イベントを編集' : '新しいイベントを追加'}
+              </h3>
+              
+              <form onSubmit={handleFormSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      イベント日 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.event_date}
+                      onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      曜日
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.day_of_week}
+                      onChange={(e) => setFormData({ ...formData, day_of_week: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="例: 月"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      開始時刻 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="time"
+                      required
+                      value={formData.start_time}
+                      onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      終了時刻 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="time"
+                      required
+                      value={formData.end_time}
+                      onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    イベント名 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.event_name}
+                    onChange={(e) => setFormData({ ...formData, event_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="イベントの名称"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      カテゴリ
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.event_category}
+                      onChange={(e) => setFormData({ ...formData, event_category: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="例: 勉強会、セミナー"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      配信形式
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.delivery_type}
+                      onChange={(e) => setFormData({ ...formData, delivery_type: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="例: オンライン、対面、ハイブリッド"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForm(false)
+                      setEditingEvent(null)
+                      resetForm()
+                    }}
+                    className="px-4 py-2 text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {loading ? '保存中...' : (editingEvent ? '更新' : '追加')}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
       </div>
