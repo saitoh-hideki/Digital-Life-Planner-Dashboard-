@@ -131,17 +131,6 @@ export default function LocalNewsDetailModal({ news, isOpen, onClose }: LocalNew
 
             {/* Details Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Source */}
-              {news.source_name && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Info className="w-4 h-4 text-slate-500" />
-                    <span className="text-sm font-medium text-slate-700">情報源</span>
-                  </div>
-                  <p className="text-slate-900 pl-6">{news.source_name}</p>
-                </div>
-              )}
-
               {/* Created Date */}
               {news.created_at && (
                 <div className="space-y-2">

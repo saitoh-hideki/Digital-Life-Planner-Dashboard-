@@ -2,22 +2,21 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Search, Gift, Filter, Calendar, Building2, MapPin } from 'lucide-react'
+import { ChevronLeft, Search, Gift, Filter, Calendar, Building2, MapPin, Eye, ExternalLink } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { SubsidyNormalized } from '@/lib/types'
+import { Subsidy } from '@/lib/types'
 import { prefectures, getMunicipalitiesByPrefecture } from '@/lib/prefectures'
-import SubsidyCard from '@/components/subsidies/SubsidyCard'
 import SubsidyDetailModal from '@/components/subsidies/SubsidyDetailModal'
 
 export default function SubsidiesPage() {
   const router = useRouter()
   
   // State management
-  const [subsidies, setSubsidies] = useState<SubsidyNormalized[]>([])
-  const [filteredSubsidies, setFilteredSubsidies] = useState<SubsidyNormalized[]>([])
+  const [subsidies, setSubsidies] = useState<Subsidy[]>([])
+  const [filteredSubsidies, setFilteredSubsidies] = useState<Subsidy[]>([])
   const [loading, setLoading] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
-  const [selectedSubsidy, setSelectedSubsidy] = useState<SubsidyNormalized | null>(null)
+  const [selectedSubsidy, setSelectedSubsidy] = useState<Subsidy | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   
   // Search filters
@@ -81,14 +80,14 @@ export default function SubsidiesPage() {
       )
     }
 
-    // Keyword filter (searches in name, summary, issuer, audience)
+    // Keyword filter (searches in name, summary, organization, target_audience)
     if (filters.keyword) {
       const keyword = filters.keyword.toLowerCase()
       filtered = filtered.filter(s => 
         s.name.toLowerCase().includes(keyword) ||
         s.summary?.toLowerCase().includes(keyword) ||
-        s.issuer?.toLowerCase().includes(keyword) ||
-        s.audience?.toLowerCase().includes(keyword)
+        s.organization?.toLowerCase().includes(keyword) ||
+        s.target_audience?.toLowerCase().includes(keyword)
       )
     }
 
@@ -100,7 +99,7 @@ export default function SubsidiesPage() {
     // Audience filter
     if (filters.audience) {
       filtered = filtered.filter(s => 
-        s.audience?.toLowerCase().includes(filters.audience.toLowerCase())
+        s.target_audience?.toLowerCase().includes(filters.audience.toLowerCase())
       )
     }
 
@@ -127,7 +126,7 @@ export default function SubsidiesPage() {
     })
   }
 
-  const handleSubsidyClick = (subsidy: Subsidy) => {
+  const showSubsidyDetail = (subsidy: Subsidy) => {
     setSelectedSubsidy(subsidy)
     setShowDetailModal(true)
   }
@@ -140,16 +139,28 @@ export default function SubsidiesPage() {
 
   // Get status badge info
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'open':
-        return { text: '公募中', color: 'bg-green-100 text-green-800' }
-      case 'coming_soon':
-        return { text: '公募予定', color: 'bg-orange-100 text-orange-800' }
-      case 'closed':
-        return { text: '終了', color: 'bg-gray-100 text-gray-800' }
-      default:
-        return { text: '不明', color: 'bg-gray-100 text-gray-800' }
+    if (!status) return { text: '不明', color: 'bg-gray-100 text-gray-800' }
+    
+    const normalized = status.toLowerCase().trim()
+    
+    if (normalized.includes('募集中') || normalized.includes('受付中') || 
+        normalized.includes('open') || normalized.includes('active')) {
+      return { text: '公募中', color: 'bg-green-100 text-green-800' }
     }
+    
+    if (normalized.includes('募集終了') || normalized.includes('受付終了') || 
+        normalized.includes('締切') || normalized.includes('closed') || 
+        normalized.includes('終了')) {
+      return { text: '終了', color: 'bg-gray-100 text-gray-800' }
+    }
+    
+    if (normalized.includes('予定') || normalized.includes('準備中') || 
+        normalized.includes('近日') || normalized.includes('coming') || 
+        normalized.includes('soon')) {
+      return { text: '公募予定', color: 'bg-orange-100 text-orange-800' }
+    }
+    
+    return { text: status, color: 'bg-blue-100 text-blue-800' }
   }
 
   // Get municipalities for selected prefecture
@@ -358,11 +369,85 @@ export default function SubsidiesPage() {
               {/* Results Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {currentSubsidies.map((subsidy) => (
-                  <SubsidyCard
-                    key={subsidy.id}
-                    subsidy={subsidy}
-                    onClick={() => handleSubsidyClick(subsidy)}
-                  />
+                  <div key={subsidy.row_id} className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                    {/* Header with status badge */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-slate-900 text-lg mb-2 group-hover:text-green-600 transition-colors duration-200 line-clamp-2">
+                          {subsidy.name}
+                        </h3>
+                        {subsidy.summary && (
+                          <p className="text-slate-600 text-sm leading-relaxed line-clamp-3 mb-3">
+                            {subsidy.summary}
+                          </p>
+                        )}
+                      </div>
+                      {subsidy.status && (
+                        <span className={`px-3 py-1 rounded-lg text-xs font-semibold flex-shrink-0 ${
+                          getStatusBadge(subsidy.status).color
+                        }`}>
+                          {getStatusBadge(subsidy.status).text}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Organization and details */}
+                    <div className="space-y-3 mb-6">
+                      {subsidy.organization && (
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <Building2 className="w-4 h-4 text-slate-400" />
+                          <span className="line-clamp-1">{subsidy.organization}</span>
+                        </div>
+                      )}
+                      
+                      {subsidy.target_audience && (
+                        <div className="text-sm text-slate-600">
+                          <span className="font-medium">対象者:</span> {subsidy.target_audience}
+                        </div>
+                      )}
+                      
+                      {subsidy.amount && (
+                        <div className="text-sm text-slate-600">
+                          <span className="font-medium">補助金額:</span> {subsidy.amount}
+                        </div>
+                      )}
+                      
+                      {subsidy.period && (
+                        <div className="text-sm text-slate-600">
+                          <span className="font-medium">期間:</span> {subsidy.period}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                      <span className="text-xs text-slate-500">
+                        {new Date(subsidy.created_at).toLocaleDateString('ja-JP')}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {/* 詳細ボタン */}
+                        <button
+                          onClick={() => showSubsidyDetail(subsidy)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-xs font-medium transition-colors duration-200"
+                        >
+                          <Eye className="w-3 h-3" />
+                          詳細
+                        </button>
+                        {/* URLボタン */}
+                        {subsidy.url && (
+                          <a
+                            href={subsidy.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg text-xs font-medium transition-colors duration-200"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            URL
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
 

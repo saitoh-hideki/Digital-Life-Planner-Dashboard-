@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { LocalNews, LocalNewsCategory } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
-import { Globe, MapPin, ExternalLink, ArrowLeft, Home, Filter, Search } from 'lucide-react'
+import { Globe, MapPin, ExternalLink, ArrowLeft, Home, Filter, Search, Eye } from 'lucide-react'
 import Link from 'next/link'
+import LocalNewsDetailModal from '@/components/dashboard/LocalNewsDetailModal'
 
 const CATEGORY_COLORS: Record<LocalNewsCategory, string> = {
   '行政DX': 'bg-blue-100 text-blue-800 border-blue-200',
@@ -35,6 +36,8 @@ export default function LocalNewsPage() {
   const [selectedPrefecture, setSelectedPrefecture] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [prefectures, setPrefectures] = useState<string[]>([])
+  const [selectedNews, setSelectedNews] = useState<LocalNews | null>(null)
+  const [isNewsModalOpen, setIsNewsModalOpen] = useState(false)
 
   // ニュース一覧の取得
   const fetchNews = async () => {
@@ -81,6 +84,11 @@ export default function LocalNewsPage() {
     acc[item.category] = (acc[item.category] || 0) + 1
     return acc
   }, {} as Record<LocalNewsCategory, number>)
+
+  const showNewsDetail = (news: LocalNews) => {
+    setSelectedNews(news)
+    setIsNewsModalOpen(true)
+  }
 
   if (loading) {
     return (
@@ -198,7 +206,7 @@ export default function LocalNewsPage() {
         {filteredNews.map((newsItem) => (
           <div
             key={newsItem.id}
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow group"
           >
             <div className="flex items-start gap-3 mb-4">
               <div className="text-3xl">
@@ -214,14 +222,14 @@ export default function LocalNewsPage() {
                     {newsItem.prefecture} {newsItem.municipality}
                   </span>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-green-600 transition-colors duration-200">
                   {newsItem.name}
                 </h3>
               </div>
             </div>
 
             {newsItem.summary && (
-              <p className="text-gray-600 mb-4 leading-relaxed">
+              <p className="text-gray-600 mb-4 leading-relaxed line-clamp-3">
                 {newsItem.summary}
               </p>
             )}
@@ -243,17 +251,28 @@ export default function LocalNewsPage() {
               <span className="text-sm text-gray-500">
                 {new Date(newsItem.created_at).toLocaleDateString('ja-JP')}
               </span>
-              {newsItem.source_url && (
-                <a
-                  href={newsItem.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-medium"
+              <div className="flex items-center gap-2">
+                {/* 詳細ボタン */}
+                <button
+                  onClick={() => showNewsDetail(newsItem)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-xs font-medium transition-colors duration-200"
                 >
-                  <ExternalLink className="w-3 h-3" />
-                  出典を確認
-                </a>
-              )}
+                  <Eye className="w-3 h-3" />
+                  詳細
+                </button>
+                {/* URLボタン */}
+                {newsItem.source_url && (
+                  <a
+                    href={newsItem.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg text-xs font-medium transition-colors duration-200"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    URL
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -282,6 +301,18 @@ export default function LocalNewsPage() {
             フィルターをリセット
           </button>
         </div>
+      )}
+
+      {/* 地域ニュース詳細モーダル */}
+      {selectedNews && (
+        <LocalNewsDetailModal
+          news={selectedNews}
+          isOpen={isNewsModalOpen}
+          onClose={() => {
+            setIsNewsModalOpen(false)
+            setSelectedNews(null)
+          }}
+        />
       )}
     </div>
   )
