@@ -21,10 +21,10 @@ CREATE TABLE IF NOT EXISTS action_tasks (
 );
 
 -- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_action_tasks_date ON action_tasks (DATE(start_time));
 CREATE INDEX IF NOT EXISTS idx_action_tasks_category ON action_tasks (category);
 CREATE INDEX IF NOT EXISTS idx_action_tasks_completed ON action_tasks (is_completed);
 CREATE INDEX IF NOT EXISTS idx_action_tasks_priority ON action_tasks (priority);
+CREATE INDEX IF NOT EXISTS idx_action_tasks_start_time ON action_tasks (start_time);
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

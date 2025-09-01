@@ -9,8 +9,9 @@ import InfoItem from '@/components/dashboard/InfoItem'
 import LocalNewsCard from '@/components/dashboard/LocalNewsCard'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { Calendar, FileText, Archive, Settings } from 'lucide-react'
+import { Calendar, FileText, Archive, Settings, Shield } from 'lucide-react'
 import Link from 'next/link'
+import { canAccessAdmin } from '@/lib/auth'
 
 export default function DashboardPage() {
   const [topics, setTopics] = useState<Topic[]>([])
@@ -22,10 +23,25 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [canAccessAdminPanel, setCanAccessAdminPanel] = useState(false)
 
   useEffect(() => {
     fetchDashboardData()
+    checkAdminAccess()
   }, [])
+
+  const checkAdminAccess = async () => {
+    try {
+      // 一時的に権限チェックを無効化して、すべてのユーザーが管理者画面にアクセス可能にする
+      setCanAccessAdminPanel(true)
+      // 本来の権限チェック（後で有効化）
+      // const hasAccess = await canAccessAdmin()
+      // setCanAccessAdminPanel(hasAccess)
+    } catch (error) {
+      console.error('Error checking admin access:', error)
+      setCanAccessAdminPanel(false)
+    }
+  }
 
   const fetchDashboardData = async () => {
     try {
@@ -428,7 +444,19 @@ export default function DashboardPage() {
 
       {/* 設定ボタン（画面右下固定） */}
       <div className="fixed bottom-6 right-6 z-[9999]">
-        <div className="relative">
+        <div className="relative flex flex-col gap-3">
+          {/* 管理者画面への移動ボタン（権限がある場合のみ表示） */}
+          {canAccessAdminPanel && (
+            <Link
+              href="/admin"
+              className="flex items-center justify-center w-14 h-14 bg-gradient-to-br from-purple-600 to-pink-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 group"
+              title="管理者画面"
+            >
+              <Shield className="w-6 h-6" />
+            </Link>
+          )}
+          
+          {/* 設定ボタン */}
           <button
             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
             className="flex items-center justify-center w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300"

@@ -82,6 +82,21 @@ CREATE TABLE IF NOT EXISTS local_media_knowledge (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
+-- 地域アプリ
+CREATE TABLE IF NOT EXISTS local_apps (
+  id SERIAL PRIMARY KEY,
+  prefecture VARCHAR(50) NOT NULL,
+  municipality VARCHAR(100),
+  name VARCHAR(200) NOT NULL,
+  summary TEXT,
+  url TEXT,
+  platform VARCHAR(100),
+  provider VARCHAR(200),
+  updated_on TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
 -- インデックス作成
 CREATE INDEX idx_subsidies_prefecture ON subsidies(prefecture);
 CREATE INDEX idx_subsidies_apply_end ON subsidies(apply_end);
@@ -91,6 +106,8 @@ CREATE INDEX idx_local_news_prefecture ON local_news(prefecture);
 CREATE INDEX idx_local_news_status ON local_news(status);
 CREATE INDEX idx_local_news_published_at ON local_news(published_at DESC);
 CREATE INDEX idx_academic_circle_events_start_at ON academic_circle_events(start_at);
+CREATE INDEX idx_local_apps_prefecture ON local_apps(prefecture);
+CREATE INDEX idx_local_apps_platform ON local_apps(platform);
 
 -- ニュースアーカイブ統合ビュー
 CREATE OR REPLACE VIEW v_news_archive AS

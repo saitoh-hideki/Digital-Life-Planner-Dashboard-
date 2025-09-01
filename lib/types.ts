@@ -239,3 +239,49 @@ export interface Supporter {
   messages: string[]
   color: string
 }
+
+// ユーザー管理のための型定義
+export interface UserRole {
+  id: string
+  user_id: string
+  role: 'admin' | 'moderator' | 'user'
+  permissions: {
+    can_manage_users?: boolean
+    can_manage_content?: boolean
+    can_access_admin?: boolean
+    can_manage_roles?: boolean
+  }
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface UserProfile {
+  id: string
+  user_id: string
+  display_name?: string
+  avatar_url?: string
+  prefecture?: string
+  municipality?: string
+  organization?: string
+  bio?: string
+  preferences: {
+    theme?: 'light' | 'dark' | 'auto'
+    language?: 'ja' | 'en'
+    notifications?: {
+      email?: boolean
+      push?: boolean
+      sms?: boolean
+    }
+    dashboard_layout?: 'grid' | 'list' | 'compact'
+  }
+  created_at: string
+  updated_at: string
+}
+
+export interface AuthUser {
+  id: string
+  email?: string
+  role: UserRole
+  profile?: UserProfile
+}
