@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import { ActionTask, ActionCategory } from '@/lib/types'
 import { format, parseISO } from 'date-fns'
-import { Clock, CheckCircle, Edit, Trash2, Plus } from 'lucide-react'
+import { ja } from 'date-fns/locale'
+import { Clock, CheckCircle, Edit, Trash2, Plus, Calendar } from 'lucide-react'
 
 interface ActionTimeTableProps {
   tasks: ActionTask[]
+  selectedDate: Date
   onTimeSlotClick: (time: string) => void
   onTaskClick: (task: ActionTask) => void
   onTaskComplete: (taskId: string) => void
@@ -15,6 +17,7 @@ interface ActionTimeTableProps {
 
 export default function ActionTimeTable({
   tasks,
+  selectedDate,
   onTimeSlotClick,
   onTaskClick,
   onTaskComplete,
@@ -155,7 +158,7 @@ export default function ActionTimeTable({
       <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
         <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
           <Clock className="w-5 h-5 text-blue-600" />
-          今日の時間割（8:00〜20:00）
+          {format(selectedDate, 'yyyy年M月d日（EEEE）', { locale: ja })}の時間割（8:00〜20:00）
         </h2>
         <p className="text-sm text-gray-600 mt-1">
           クリックしてタスクを追加、ドラッグで移動、リサイズで時間変更

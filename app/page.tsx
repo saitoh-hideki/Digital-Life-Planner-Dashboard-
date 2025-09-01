@@ -41,12 +41,11 @@ export default function DashboardPage() {
       
       if (topicsError) throw topicsError
       
-      // 補助金・助成金
+      // 補助金・助成金（subsidies_sheetテーブルから取得）
       const { data: subsidiesData, error: subsidiesError } = await supabase
-        .from('subsidies')
+        .from('subsidies_sheet')
         .select('*')
-        .gte('apply_end', new Date().toISOString())
-        .order('apply_end', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(3)
       
       if (subsidiesError) throw subsidiesError
@@ -64,8 +63,7 @@ export default function DashboardPage() {
       const { data: newsData, error: newsError } = await supabase
         .from('local_news')
         .select('*')
-        .eq('status', 'published')
-        .order('published_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(3)
       
       if (newsError) throw newsError
@@ -184,22 +182,33 @@ export default function DashboardPage() {
             title="補助金・助成金"
             icon="💰"
             linkText="検索へ"
-            linkHref="/search/subsidies"
+            linkHref="/subsidies"
           >
             {subsidies.length > 0 ? (
               <div className="space-y-4">
                 {subsidies.map((subsidy) => (
-                  <InfoItem
-                    key={subsidy.id}
-                    title={subsidy.name}
-                    description={subsidy.summary}
-                    metadata={[
-                      subsidy.audience || '',
-                      subsidy.apply_end ? `締切: ${format(new Date(subsidy.apply_end), 'MM/dd')}` : ''
-                    ].filter(Boolean)}
-                    badge={getSubsidyStatusBadge(subsidy.apply_end || null)}
-                    badgeColor={getSubsidyStatusColor(subsidy.apply_end || null)}
-                  />
+                  <div key={subsidy.row_id} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-slate-900 text-sm mb-2 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2">
+                          {subsidy.name}
+                        </h4>
+                        <p className="text-slate-600 text-sm leading-relaxed line-clamp-2">
+                          {subsidy.summary || subsidy.organization}
+                        </p>
+                      </div>
+                      {subsidy.status && (
+                        <span className={`px-3 py-2 rounded-lg text-xs font-semibold flex-shrink-0 ${
+                          getSubsidyStatusColorFromStatus(subsidy.status) === 'green' ? 'bg-green-100 text-green-800' :
+                          getSubsidyStatusColorFromStatus(subsidy.status) === 'orange' ? 'bg-orange-100 text-orange-800' :
+                          getSubsidyStatusColorFromStatus(subsidy.status) === 'gray' ? 'bg-gray-100 text-gray-800' :
+                          'bg-blue-100 text-blue-800'
+                        }`}>
+                          {subsidy.status}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : (
@@ -341,7 +350,7 @@ export default function DashboardPage() {
                           className="flex items-center gap-1 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 text-xs font-semibold shadow-sm hover:shadow-md transform hover:-translate-y-0.5 flex-shrink-0"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
                           開く
                         </a>
@@ -452,26 +461,29 @@ export default function DashboardPage() {
 }
 
 // ヘルパー関数
-function getSubsidyStatusBadge(endDate: string | null): string {
-  if (!endDate) return '情報なし'
-  const now = new Date()
-  const end = new Date(endDate)
-  const diffDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+function getSubsidyStatusColorFromStatus(status: string): string {
+  if (!status) return 'gray'
   
-  if (diffDays < 0) return '終了'
-  if (diffDays <= 7) return '締切間近'
-  return '余裕あり'
-}
-
-function getSubsidyStatusColor(endDate: string | null): string {
-  if (!endDate) return 'gray'
-  const now = new Date()
-  const end = new Date(endDate)
-  const diffDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+  const normalized = status.toLowerCase().trim()
   
-  if (diffDays < 0) return 'gray'
-  if (diffDays <= 7) return 'orange'
-  return 'green'
+  if (normalized.includes('募集中') || normalized.includes('受付中') || 
+      normalized.includes('open') || normalized.includes('active')) {
+    return 'green'
+  }
+  
+  if (normalized.includes('募集終了') || normalized.includes('受付終了') || 
+      normalized.includes('締切') || normalized.includes('closed') || 
+      normalized.includes('終了')) {
+    return 'gray'
+  }
+  
+  if (normalized.includes('予定') || normalized.includes('準備中') || 
+      normalized.includes('近日') || normalized.includes('coming') || 
+      normalized.includes('soon')) {
+    return 'orange'
+  }
+  
+  return 'blue' // デフォルト
 }
 
 function getFileTypeBackground(fileName: string | null): string {

@@ -30,7 +30,7 @@ export default function SearchPage() {
         .select('*')
       
       if (searchType === 'news') {
-        query = query.eq('status', 'published')
+        // topicsテーブルにはstatusカラムがないので条件を追加しない
       }
       
       if (searchType === 'local-news') {
@@ -132,7 +132,7 @@ export default function SearchPage() {
       case 'apps':
         return 'id' // updated_onカラムが存在しない場合はidでソート
       case 'news':
-        return 'published_at'
+        return 'created_at'
       case 'local-news':
         return 'created_at'
       default:
@@ -154,7 +154,7 @@ export default function SearchPage() {
         .select('*')
       
       if (searchType === 'news') {
-        query = query.eq('status', 'published')
+        // topicsテーブルにはstatusカラムがないので条件を追加しない
       }
       
       if (searchType === 'local-news') {

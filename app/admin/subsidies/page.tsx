@@ -1,386 +1,403 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Subsidy } from '@/lib/types'
-import { DollarSign, Plus, Edit, Trash2, Save, X, Calendar } from 'lucide-react'
-import Link from 'next/link'
+import { SubsidySheet, SubsidyNormalized } from '@/lib/types'
+import { Upload, Download, RefreshCw, FileText, Database, CheckCircle, AlertCircle } from 'lucide-react'
 
-interface SubsidyFormData {
-  name: string
-  summary: string
-  audience: string
-  apply_start: string
-  apply_end: string
-}
-
-export default function SubsidiesAdminPage() {
-  const [subsidies, setSubsidies] = useState<Subsidy[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isEditing, setIsEditing] = useState<number | null>(null)
-  const [formData, setFormData] = useState<SubsidyFormData>({
-    name: '',
-    summary: '',
-    audience: '',
-    apply_start: '',
-    apply_end: ''
-  })
+export default function AdminSubsidiesPage() {
+  const [sheetData, setSheetData] = useState<SubsidySheet[]>([])
+  const [normalizedData, setNormalizedData] = useState<SubsidyNormalized[]>([])
+  const [loading, setLoading] = useState(false)
+  const [etlLoading, setEtlLoading] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [csvFile, setCsvFile] = useState<File | null>(null)
 
   useEffect(() => {
-    fetchSubsidies()
+    loadData()
   }, [])
 
-  const fetchSubsidies = async () => {
+  const loadData = async () => {
+    setLoading(true)
     try {
-      setError(null)
-      const { data, error } = await supabase
-        .from('subsidies')
+      // subsidies_sheetからデータ取得
+      const { data: sheetData, error: sheetError } = await supabase
+        .from('subsidies_sheet')
         .select('*')
         .order('created_at', { ascending: false })
 
-      if (error) throw error
-      setSubsidies(data || [])
+      if (sheetError) throw sheetError
+
+      // subsidies_normalizedからデータ取得
+      const { data: normalizedData, error: normalizedError } = await supabase
+        .from('subsidies_normalized')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (normalizedError) throw normalizedError
+
+      setSheetData(sheetData || [])
+      setNormalizedData(normalizedData || [])
     } catch (error) {
-      console.error('Error fetching subsidies:', error)
-      setError('データの取得中にエラーが発生しました')
+      console.error('Error loading data:', error)
+      setMessage({ type: 'error', text: 'データの読み込みに失敗しました' })
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!file.name.endsWith('.csv')) {
+      setMessage({ type: 'error', text: 'CSVファイルを選択してください' })
+      return
+    }
+
+    setCsvFile(file)
+  }
+
+  const importCSV = async () => {
+    if (!csvFile) return
+
+    setLoading(true)
     try {
-      setError(null)
+      const text = await csvFile.text()
+      const lines = text.split('\n')
       
-      if (isEditing) {
-        // 更新
-        const { error } = await supabase
-          .from('subsidies')
-          .update({
-            ...formData,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', isEditing)
-
-        if (error) throw error
-      } else {
-        // 新規作成
-        const { error } = await supabase
-          .from('subsidies')
-          .insert([formData])
-
-        if (error) throw error
+      if (lines.length < 2) {
+        throw new Error('CSVファイルが空またはヘッダーのみです')
       }
 
-      // フォームをリセット
-      setFormData({ name: '', summary: '', audience: '', apply_start: '', apply_end: '' })
-      setIsEditing(null)
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
+      const expectedHeaders = ['id', 'name', 'organization', 'summary', 'period', 'purpose', 'target_audience', 'amount', 'url', 'status']
       
-      // データを再取得
-      await fetchSubsidies()
+      // ヘッダー検証
+      if (!expectedHeaders.every(h => headers.includes(h))) {
+        throw new Error('CSVのヘッダーが期待される形式と一致しません')
+      }
+
+      const records: Partial<SubsidySheet>[] = []
+      
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim()
+        if (!line) continue
+
+        const values = line.split(',').map(v => v.trim().replace(/"/g, ''))
+        if (values.length < headers.length) continue
+
+        const record: Partial<SubsidySheet> = {
+          id: values[0] || undefined,
+          name: values[1] || '',
+          organization: values[2] || undefined,
+          summary: values[3] || undefined,
+          period: values[4] || undefined,
+          purpose: values[5] || undefined,
+          target_audience: values[6] || undefined,
+          amount: values[7] || undefined,
+          url: values[8] || undefined,
+          status: values[9] || undefined
+        }
+
+        // nameが空のレコードはスキップ
+        if (!record.name) continue
+
+        records.push(record)
+      }
+
+      if (records.length === 0) {
+        throw new Error('有効なデータが見つかりませんでした')
+      }
+
+      // データベースに挿入
+      const { error: insertError } = await supabase
+        .from('subsidies_sheet')
+        .insert(records)
+
+      if (insertError) throw insertError
+
+      setMessage({ type: 'success', text: `${records.length}件のデータをインポートしました` })
+      setCsvFile(null)
+      
+      // データを再読み込み
+      await loadData()
+      
     } catch (error) {
-      console.error('Error saving subsidy:', error)
-      setError('データの保存中にエラーが発生しました')
+      console.error('CSV import error:', error)
+      setMessage({ type: 'error', text: `CSVインポートに失敗しました: ${error.message}` })
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleEdit = (item: Subsidy) => {
-    setIsEditing(item.id)
-    setFormData({
-      name: item.name || '',
-      summary: item.summary || '',
-      audience: item.audience || '',
-      apply_start: item.apply_start ? new Date(item.apply_start).toISOString().split('T')[0] : '',
-      apply_end: item.apply_end ? new Date(item.apply_end).toISOString().split('T')[0] : ''
-    })
-  }
-
-  const handleDelete = async (id: number) => {
-    if (!confirm('この補助金・助成金を削除しますか？')) return
-
+  const runETL = async () => {
+    setEtlLoading(true)
     try {
-      setError(null)
-      const { error } = await supabase
-        .from('subsidies')
-        .delete()
-        .eq('id', id)
+      const response = await fetch('/api/etl-subsidies', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error(`ETL failed: ${response.status}`)
+      }
+
+      const result = await response.json()
+      setMessage({ 
+        type: 'success', 
+        text: `ETL完了: ${result.processed}件処理、期間解析成功率${result.periodParseRate}%、金額解析成功率${result.amountParseRate}%` 
+      })
       
-      await fetchSubsidies()
+      // データを再読み込み
+      await loadData()
+      
     } catch (error) {
-      console.error('Error deleting subsidy:', error)
-      setError('データの削除中にエラーが発生しました')
+      console.error('ETL error:', error)
+      setMessage({ type: 'error', text: `ETL実行に失敗しました: ${error.message}` })
+    } finally {
+      setEtlLoading(false)
     }
   }
 
-  const handleCancel = () => {
-    setIsEditing(null)
-    setFormData({ name: '', summary: '', audience: '', apply_start: '', apply_end: '' })
-  }
+  const clearData = async () => {
+    if (!confirm('すべてのデータを削除しますか？この操作は元に戻せません。')) return
 
-  const getStatusBadge = (endDate: string | null) => {
-    if (!endDate) return { text: '情報なし', color: 'bg-gray-100 text-gray-800' }
-    
-    const now = new Date()
-    const end = new Date(endDate)
-    const diffDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-    
-    if (diffDays < 0) return { text: '終了', color: 'bg-gray-100 text-gray-800' }
-    if (diffDays <= 7) return { text: '締切間近', color: 'bg-orange-100 text-orange-800' }
-    return { text: '余裕あり', color: 'bg-green-100 text-green-800' }
-  }
+    setLoading(true)
+    try {
+      // 正規化テーブルから削除
+      const { error: normalizedError } = await supabase
+        .from('subsidies_normalized')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000')
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <div className="text-slate-500">読み込み中...</div>
-        </div>
-      </div>
-    )
+      if (normalizedError) throw normalizedError
+
+      // シートテーブルから削除
+      const { error: sheetError } = await supabase
+        .from('subsidies_sheet')
+        .delete()
+        .neq('row_id', '00000000-0000-0000-0000-000000000000')
+
+      if (sheetError) throw sheetError
+
+      setMessage({ type: 'success', text: 'すべてのデータを削除しました' })
+      await loadData()
+      
+    } catch (error) {
+      console.error('Clear data error:', error)
+      setMessage({ type: 'error', text: 'データの削除に失敗しました' })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">補助金・助成金管理</h1>
-          <p className="text-slate-600 mt-2">地域の補助金・助成金情報を管理します</p>
+    <div className="min-h-screen bg-slate-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">補助金・助成金管理</h1>
+          <p className="text-slate-600">スプレッドシート準拠のデータ管理とETL処理</p>
         </div>
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-          </svg>
-          ダッシュボードに戻る
-        </Link>
-      </div>
 
-      {/* フォーム */}
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
-        <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
-          <DollarSign className="w-5 h-5" />
-          {isEditing ? '補助金・助成金を編集' : '新しい補助金・助成金を追加'}
-        </h2>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              名称 *
-            </label>
+        {/* Message */}
+        {message && (
+          <div className={`mb-6 p-4 rounded-lg border ${
+            message.type === 'success' 
+              ? 'bg-green-50 border-green-200 text-green-800' 
+              : 'bg-red-50 border-red-200 text-red-800'
+          }`}>
+            <div className="flex items-center gap-2">
+              {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+              {message.text}
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* CSV Upload */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Upload className="w-5 h-5 text-blue-600" />
+              </div>
+              <h3 className="font-semibold text-slate-900">CSVインポート</h3>
+            </div>
+            
             <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="例: 創業支援補助金"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              type="file"
+              accept=".csv"
+              onChange={handleFileUpload}
+              className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-3"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              概要 *
-            </label>
-            <textarea
-              required
-              value={formData.summary}
-              onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
-              placeholder="補助金・助成金の詳細な説明"
-              rows={3}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                対象者
-              </label>
-              <input
-                type="text"
-                value={formData.audience}
-                onChange={(e) => setFormData({ ...formData, audience: e.target.value })}
-                placeholder="例: 中小企業、個人事業主"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
             
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                申請開始日
-              </label>
-              <input
-                type="date"
-                value={formData.apply_start}
-                onChange={(e) => setFormData({ ...formData, apply_start: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                申請終了日
-              </label>
-              <input
-                type="date"
-                value={formData.apply_end}
-                onChange={(e) => setFormData({ ...formData, apply_end: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 pt-4">
-            <button
-              type="submit"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors duration-200"
-            >
-              {isEditing ? (
-                <>
-                  <Save className="w-4 h-4" />
-                  更新
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  追加
-                </>
-              )}
-            </button>
-            
-            {isEditing && (
+            {csvFile && (
               <button
-                type="button"
-                onClick={handleCancel}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-300 transition-colors duration-200"
+                onClick={importCSV}
+                disabled={loading}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <X className="w-4 h-4" />
-                キャンセル
+                {loading ? 'インポート中...' : 'インポート実行'}
               </button>
             )}
           </div>
-        </form>
-      </div>
 
-      {/* エラーメッセージ */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-          <div className="flex items-center gap-2 text-red-800">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-            <span className="font-medium">{error}</span>
+          {/* ETL Process */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <RefreshCw className="w-5 h-5 text-green-600" />
+              </div>
+              <h3 className="font-semibold text-slate-900">ETL実行</h3>
+            </div>
+            
+            <p className="text-sm text-slate-600 mb-4">
+              シートデータを正規化テーブルに変換
+            </p>
+            
+            <button
+              onClick={runETL}
+              disabled={etlLoading || sheetData.length === 0}
+              className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {etlLoading ? '処理中...' : 'ETL実行'}
+            </button>
+          </div>
+
+          {/* Data Clear */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                <Database className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="font-semibold text-slate-900">データクリア</h3>
+            </div>
+            
+            <p className="text-sm text-slate-600 mb-4">
+              全データを削除
+            </p>
+            
+            <button
+              onClick={clearData}
+              disabled={loading || (sheetData.length === 0 && normalizedData.length === 0)}
+              className="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              全削除
+            </button>
+          </div>
+
+          {/* Refresh */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                <RefreshCw className="w-5 h-5 text-slate-600" />
+              </div>
+              <h3 className="font-semibold text-slate-900">更新</h3>
+            </div>
+            
+            <p className="text-sm text-slate-600 mb-4">
+              データを再読み込み
+            </p>
+            
+            <button
+              onClick={loadData}
+              disabled={loading}
+              className="w-full bg-slate-600 text-white py-2 px-4 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              更新
+            </button>
           </div>
         </div>
-      )}
 
-      {/* 補助金・助成金一覧 */}
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200">
-        <div className="px-6 py-4 border-b border-slate-200">
-          <h2 className="text-xl font-semibold text-slate-900">補助金・助成金一覧</h2>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  名称
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  概要
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  対象者
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  申請期間
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  ステータス
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  操作
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
-              {subsidies.map((item) => {
-                const status = getStatusBadge(item.apply_end)
-                return (
-                  <tr key={item.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      {item.id}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                      {item.name || '-'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-900 max-w-xs">
-                      <div className="truncate" title={item.summary}>
-                        {item.summary || '-'}
+        {/* Data Overview */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Sheet Data */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+            <div className="p-6 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-slate-900">シートデータ (subsidies_sheet)</h3>
+              </div>
+              <p className="text-sm text-slate-600 mt-1">
+                CSVから直接インポートされた生データ
+              </p>
+            </div>
+            
+            <div className="p-6">
+              <div className="text-3xl font-bold text-blue-600 mb-2">{sheetData.length}</div>
+              <div className="text-sm text-slate-600">件のレコード</div>
+              
+              {sheetData.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {sheetData.slice(0, 5).map((record, index) => (
+                    <div key={record.row_id} className="text-sm p-3 bg-slate-50 rounded-lg">
+                      <div className="font-medium text-slate-900">{record.name}</div>
+                      <div className="text-slate-600 text-xs">
+                        {record.organization && `${record.organization} • `}
+                        {record.period && `${record.period} • `}
+                        {record.status || 'ステータス未設定'}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      {item.audience || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4 text-slate-400" />
-                        <span>
-                          {item.apply_start ? new Date(item.apply_start).toLocaleDateString('ja-JP') : '-'}
-                          {' → '}
-                          {item.apply_end ? new Date(item.apply_end).toLocaleDateString('ja-JP') : '-'}
+                    </div>
+                  ))}
+                  {sheetData.length > 5 && (
+                    <div className="text-sm text-slate-500 text-center py-2">
+                      他 {sheetData.length - 5} 件...
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Normalized Data */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+            <div className="p-6 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <Database className="w-5 h-5 text-green-600" />
+                <h3 className="text-lg font-semibold text-slate-900">正規化データ (subsidies_normalized)</h3>
+              </div>
+              <p className="text-sm text-slate-600 mt-1">
+                ETL処理で生成された表示用データ
+              </p>
+            </div>
+            
+            <div className="p-6">
+              <div className="text-3xl font-bold text-green-600 mb-2">{normalizedData.length}</div>
+              <div className="text-sm text-slate-600">件のレコード</div>
+              
+              {normalizedData.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {normalizedData.slice(0, 5).map((record, index) => (
+                    <div key={record.id} className="text-sm p-3 bg-slate-50 rounded-lg">
+                      <div className="font-medium text-slate-900">{record.name}</div>
+                      <div className="text-slate-600 text-xs">
+                        {record.issuer && `${record.issuer} • `}
+                        {record.apply_start && record.apply_end && `${record.apply_start} ～ ${record.apply_end} • `}
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          record.status === 'open' ? 'bg-green-100 text-green-800' :
+                          record.status === 'coming_soon' ? 'bg-orange-100 text-orange-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {record.status === 'open' ? '公募中' : 
+                           record.status === 'coming_soon' ? '公募予定' : '終了'}
                         </span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
-                        {status.text}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleEdit(item)}
-                          className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50"
-                          title="編集"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"
-                          title="削除"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-        
-        {subsidies.length === 0 && (
-          <div className="text-center py-12">
-            <DollarSign className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500 text-lg">補助金・助成金情報はまだありません</p>
-            <p className="text-slate-400 text-sm mt-2">新しい補助金・助成金を追加してください</p>
+                    </div>
+                  ))}
+                  {normalizedData.length > 5 && (
+                    <div className="text-sm text-slate-500 text-center py-2">
+                      他 {normalizedData.length - 5} 件...
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   )

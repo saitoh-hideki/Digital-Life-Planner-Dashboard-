@@ -11,7 +11,6 @@ interface NewsFormData {
   summary: string
   source_name: string
   prefecture: string
-  status: string
   tags: string
 }
 
@@ -25,7 +24,6 @@ export default function NewsAdminPage() {
     summary: '',
     source_name: '',
     prefecture: '',
-    status: 'draft',
     tags: ''
   })
 
@@ -39,7 +37,7 @@ export default function NewsAdminPage() {
       const { data, error } = await supabase
         .from('local_news')
         .select('*')
-        .order('published_at', { ascending: false })
+        .order('created_at', { ascending: false })
 
       if (error) throw error
       setNews(data || [])
@@ -69,9 +67,7 @@ export default function NewsAdminPage() {
             summary: formData.summary,
             source_name: formData.source_name,
             prefecture: formData.prefecture,
-            status: formData.status,
-            tags: tagsArray,
-            updated_at: new Date().toISOString()
+            tags: tagsArray
           })
           .eq('id', isEditing)
 
@@ -85,9 +81,7 @@ export default function NewsAdminPage() {
             summary: formData.summary,
             source_name: formData.source_name,
             prefecture: formData.prefecture,
-            status: formData.status,
-            tags: tagsArray,
-            published_at: formData.status === 'published' ? new Date().toISOString() : null
+            tags: tagsArray
           }])
 
         if (error) throw error

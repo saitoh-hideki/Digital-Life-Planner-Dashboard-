@@ -16,10 +16,42 @@ export interface LocalApp {
   updated_on?: string
 }
 
+// メイン補助金・助成金型（subsidies_sheet テーブル基準）
 export interface Subsidy {
-  id?: number
-  prefecture: string
-  municipality?: string
+  row_id: string
+  id?: string
+  name: string
+  organization?: string
+  summary?: string
+  period?: string
+  purpose?: string
+  target_audience?: string
+  amount?: string
+  url?: string
+  status?: string
+  created_at: string
+}
+
+// スプレッドシート準拠の補助金・助成金（CSV取り込み用）
+export interface SubsidySheet {
+  row_id: string
+  id?: string
+  name: string
+  organization?: string
+  summary?: string
+  period?: string
+  purpose?: string
+  target_audience?: string
+  amount?: string
+  url?: string
+  status?: string
+  created_at: string
+}
+
+// 正規化済みの補助金・助成金（アプリ表示用）
+export interface SubsidyNormalized {
+  id: string
+  source_row_id: string
   name: string
   summary?: string
   issuer?: string
@@ -27,7 +59,14 @@ export interface Subsidy {
   url?: string
   apply_start?: string
   apply_end?: string
-  status?: string
+  status: 'open' | 'closed' | 'coming_soon'
+  prefecture?: string
+  municipality?: string
+  amount_text?: string
+  amount_min?: number
+  amount_max?: number
+  created_at: string
+  updated_at: string
 }
 
 export interface Topic {

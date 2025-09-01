@@ -13,6 +13,7 @@ import MonthlySummaryCard from '@/components/actions/MonthlySummaryCard'
 import ConfettiEffect from '@/components/actions/ConfettiEffect'
 import SupporterSelector from '@/components/actions/SupporterSelector'
 import LocalNewsSettings from '@/components/actions/LocalNewsSettings'
+import DateSelector from '@/components/actions/DateSelector'
 
 // 応援者の型定義（簡素化）
 interface Supporter {
@@ -32,7 +33,8 @@ export default function ActionsPage() {
   const [error, setError] = useState<string | null>(null)
   const [dailySummary, setDailySummary] = useState<DailySummary | null>(null)
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary | null>(null)
-  const [currentDate] = useState(new Date())
+  const [currentDate, setCurrentDate] = useState(new Date())
+  const [selectedDate, setSelectedDate] = useState(new Date())
   const [showConfetti, setShowConfetti] = useState(false)
   const [isSupporterSelectorOpen, setIsSupporterSelectorOpen] = useState(false)
   const [selectedSupporter, setSelectedSupporter] = useState<Supporter | null>(null)
@@ -56,17 +58,18 @@ export default function ActionsPage() {
     localStorage.setItem('selectedSupporter', JSON.stringify(supporter))
   }
 
-  const fetchTasks = useCallback(async () => {
+  const fetchTasks = useCallback(async (targetDate?: Date) => {
     try {
       setLoading(true)
-      const today = format(currentDate, 'yyyy-MM-dd')
+      const dateToFetch = targetDate || selectedDate
+      const dateStr = format(dateToFetch, 'yyyy-MM-dd')
       
-      // 今日のタスクのみを取得（重複を防ぐ）
+      // 指定された日のタスクを取得
       const { data, error } = await supabase
         .from('action_tasks')
         .select('*')
-        .gte('start_time', `${today} 00:00`)
-        .lt('start_time', `${today} 23:59`)
+        .gte('start_time', `${dateStr} 00:00`)
+        .lt('start_time', `${dateStr} 23:59`)
         .order('start_time', { ascending: true })
 
       if (error) throw error
@@ -77,14 +80,52 @@ export default function ActionsPage() {
     } finally {
       setLoading(false)
     }
-  }, [currentDate])
+  }, [selectedDate])
+
+  // 日付が変わったときの自動リセット機能
+  useEffect(() => {
+    const checkDateChange = () => {
+      const now = new Date()
+      const today = format(now, 'yyyy-MM-dd')
+      const current = format(currentDate, 'yyyy-MM-dd')
+      
+      if (today !== current) {
+        setCurrentDate(now)
+        setSelectedDate(now)
+        fetchTasks(now)
+      }
+    }
+
+    // 1分ごとに日付をチェック
+    const interval = setInterval(checkDateChange, 60000)
+    
+    // ページフォーカス時にもチェック
+    const handleFocus = () => checkDateChange()
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [currentDate, fetchTasks])
+
+  // 日付変更ハンドラー
+  const handleDateChange = (date: Date) => {
+    setSelectedDate(date)
+  }
+
+  // 日付検索ハンドラー
+  const handleDateSearch = (date: Date) => {
+    setSelectedDate(date)
+    fetchTasks(date)
+  }
 
   const fetchSummaries = useCallback(async () => {
     try {
       // 日次サマリー
-      const today = format(currentDate, 'yyyy-MM-dd')
+      const targetDate = format(selectedDate, 'yyyy-MM-dd')
       const todayTasks = tasks.filter(task => 
-        format(parseISO(task.start_time), 'yyyy-MM-dd') === today
+        format(parseISO(task.start_time), 'yyyy-MM-dd') === targetDate
       )
       
       const completedCount = todayTasks.filter(task => task.is_completed).length
@@ -103,7 +144,7 @@ export default function ActionsPage() {
       }, 0)
 
       setDailySummary({
-        date: today,
+        date: targetDate,
         completed_count: completedCount,
         total_count: totalCount,
         completion_rate: completionRate,
@@ -176,7 +217,7 @@ export default function ActionsPage() {
     } catch (error) {
       console.error('Error calculating summaries:', error)
     }
-  }, [tasks, currentDate])
+  }, [tasks, selectedDate, currentDate])
 
   useEffect(() => {
     fetchTasks()
@@ -312,7 +353,7 @@ export default function ActionsPage() {
               Actions（アクションズ）
             </h1>
             <p className="text-lg text-gray-600 mt-2">
-              今日の行動計画を管理し、時間を有効活用しましょう
+              {format(selectedDate, 'yyyy年M月d日（EEEE）', { locale: ja })}の行動計画を管理し、時間を有効活用しましょう
             </p>
           </div>
           
@@ -347,6 +388,13 @@ export default function ActionsPage() {
         </div>
       </div>
 
+      {/* 日付選択 */}
+      <DateSelector
+        selectedDate={selectedDate}
+        onDateChange={handleDateChange}
+        onSearch={handleDateSearch}
+      />
+
       {/* 日次サマリー */}
       {dailySummary && (
         <DailySummaryCard summary={dailySummary} />
@@ -363,6 +411,7 @@ export default function ActionsPage() {
         <div className="lg:col-span-5">
           <ActionTimeTable
             tasks={tasks}
+            selectedDate={selectedDate}
             onTimeSlotClick={handleTimeSlotClick}
             onTaskClick={handleTaskClick}
             onTaskComplete={handleTaskComplete}
