@@ -45,6 +45,28 @@ export default function LocalNewsCard() {
         .limit(20)
 
       if (error) throw error
+      
+      // デバッグ情報を追加
+      console.log('LocalNewsCard - Fetched news data:', data)
+      if (data && data.length > 0) {
+        console.log('LocalNewsCard - First item body:', data[0].body)
+        console.log('LocalNewsCard - First item body type:', typeof data[0].body)
+        console.log('LocalNewsCard - First item body length:', data[0].body?.length)
+        console.log('LocalNewsCard - First item summary:', data[0].summary)
+        console.log('LocalNewsCard - First item summary type:', typeof data[0].summary)
+        console.log('LocalNewsCard - First item summary length:', data[0].summary?.length)
+        console.log('LocalNewsCard - All items with body:', data.filter(item => item.body && item.body.length > 0).length)
+        console.log('LocalNewsCard - All items with summary:', data.filter(item => item.summary && item.summary.length > 0).length)
+        console.log('LocalNewsCard - All items body data:', data.map(item => ({ 
+          id: item.id, 
+          name: item.name, 
+          body: item.body, 
+          bodyLength: item.body?.length,
+          summary: item.summary,
+          summaryLength: item.summary?.length
+        })))
+      }
+      
       setNews(data || [])
     } catch (error) {
       console.error('Error fetching news:', error)
@@ -164,11 +186,28 @@ export default function LocalNewsCard() {
                   <h4 className="font-medium text-gray-900 mb-2 line-clamp-2">
                     {newsItem.name}
                   </h4>
-                  {newsItem.summary && (
+                  {/* 本文の表示 - bodyフィールドを優先して表示 */}
+                  {newsItem.body ? (
+                    <div className="mb-3">
+                      <p className="text-sm text-gray-600 line-clamp-2">
+                        {newsItem.body}
+                      </p>
+                      {newsItem.body.length > 100 && (
+                        <details className="mt-2">
+                          <summary className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer font-medium">
+                            全文を見る ({newsItem.body.length}文字)
+                          </summary>
+                          <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-700 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                            {newsItem.body}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  ) : newsItem.summary ? (
                     <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                       {newsItem.summary}
                     </p>
-                  )}
+                  ) : null}
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">
                       {new Date(newsItem.created_at).toLocaleDateString('ja-JP')}

@@ -13,6 +13,25 @@ interface LocalNewsDetailModalProps {
 }
 
 export default function LocalNewsDetailModal({ news, isOpen, onClose }: LocalNewsDetailModalProps) {
+  // デバッグ情報を追加
+  useEffect(() => {
+    if (isOpen && news) {
+      console.log('=== LocalNewsDetailModal デバッグ情報 ===')
+      console.log('LocalNewsDetailModal - News data:', news)
+      console.log('LocalNewsDetailModal - Body field:', news.body)
+      console.log('LocalNewsDetailModal - Body type:', typeof news.body)
+      console.log('LocalNewsDetailModal - Body length:', news.body?.length)
+      console.log('LocalNewsDetailModal - Body is null:', news.body === null)
+      console.log('LocalNewsDetailModal - Body is undefined:', news.body === undefined)
+      console.log('LocalNewsDetailModal - Body is empty string:', news.body === '')
+      console.log('LocalNewsDetailModal - Summary field:', news.summary)
+      console.log('LocalNewsDetailModal - Summary type:', typeof news.summary)
+      console.log('LocalNewsDetailModal - Summary length:', news.summary?.length)
+      console.log('LocalNewsDetailModal - All fields:', Object.keys(news))
+      console.log('=========================================')
+    }
+  }, [isOpen, news])
+
   // Close modal on escape key press
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -116,21 +135,33 @@ export default function LocalNewsDetailModal({ news, isOpen, onClose }: LocalNew
 
           {/* Content */}
           <div className="px-6 py-6 space-y-6 max-h-[60vh] overflow-y-auto">
-            {/* Summary */}
-            {news.summary && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-slate-500" />
-                  <h3 className="text-lg font-semibold text-slate-900">概要</h3>
-                </div>
-                <p className="text-slate-700 leading-relaxed pl-7">
-                  {news.summary}
-                </p>
+            {/* 本文の表示 - bodyフィールドを確実に表示 */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-slate-500" />
+                <h3 className="text-lg font-semibold text-slate-900">本文</h3>
               </div>
-            )}
+              <div className="text-slate-700 leading-relaxed pl-7 whitespace-pre-wrap">
+                {news.body || news.summary || '内容がありません'}
+              </div>
+            </div>
+
+            {/* デバッグ情報の表示 */}
+            <div className="space-y-3 p-4 bg-gray-100 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Info className="w-5 h-5 text-slate-500" />
+                <h3 className="text-lg font-semibold text-slate-900">デバッグ情報</h3>
+              </div>
+              <div className="text-sm text-slate-600 pl-7">
+                <p>Body: {news.body ? `"${news.body}"` : 'null/undefined'}</p>
+                <p>Summary: {news.summary ? `"${news.summary}"` : 'null/undefined'}</p>
+                <p>Body type: {typeof news.body}</p>
+                <p>Body length: {news.body?.length || 0}</p>
+              </div>
+            </div>
 
             {/* Details Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               {/* Created Date */}
               {news.created_at && (
                 <div className="space-y-2">

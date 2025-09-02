@@ -63,12 +63,12 @@ export interface Topic {
 export interface LocalNews {
   id: string
   prefecture: string
-  municipality: string
+  municipality?: string
   name: string
   summary?: string
   body?: string
   source_url?: string
-  category: LocalNewsCategory
+  category?: LocalNewsCategory
   created_at: string
 }
 

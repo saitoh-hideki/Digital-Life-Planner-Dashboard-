@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { SubsidySheet } from '@/lib/types'
 import { Upload, Download, Plus, Edit, Trash2, Database, FileText, CheckCircle, AlertCircle, Gift } from 'lucide-react'
+import DeleteConfirmDialog from '@/components/admin/DeleteConfirmDialog'
 
 export default function AdminSubsidiesPage() {
   const [sheetData, setSheetData] = useState<SubsidySheet[]>([])
@@ -12,6 +13,17 @@ export default function AdminSubsidiesPage() {
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingSubsidy, setEditingSubsidy] = useState<SubsidySheet | null>(null)
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
+  const [showBulkActions, setShowBulkActions] = useState(false)
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean
+    type: 'single' | 'bulk'
+    itemId?: string
+    itemName?: string
+  }>({
+    isOpen: false,
+    type: 'single'
+  })
   const [formData, setFormData] = useState({
     name: '',
     organization: '',
@@ -27,6 +39,10 @@ export default function AdminSubsidiesPage() {
   useEffect(() => {
     loadData()
   }, [])
+
+  useEffect(() => {
+    setShowBulkActions(selectedItems.length > 0)
+  }, [selectedItems])
 
   const loadData = async () => {
     setLoading(true)

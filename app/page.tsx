@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Topic, LocalApp, Subsidy, LocalNews, AcademicCircleEvent, LocalMediaKnowledge } from '@/lib/types'
+import { Topic, LocalApp, Subsidy, LocalNews, LocalNewsCategory, AcademicCircleEvent, LocalMediaKnowledge } from '@/lib/types'
 import DashboardCard from '@/components/dashboard/DashboardCard'
 import TopicCarousel from '@/components/dashboard/TopicCarousel'
 import InfoItem from '@/components/dashboard/InfoItem'
@@ -98,7 +98,22 @@ export default function DashboardPage() {
         .order('created_at', { ascending: false })
         .limit(3)
       
-      if (newsError) throw newsError
+      if (newsError) {
+        console.error('News error:', newsError)
+        throw newsError
+      }
+      
+      // デバッグ情報を追加
+      console.log('DashboardPage - Fetched news data:', newsData)
+      if (newsData && newsData.length > 0) {
+        console.log('DashboardPage - First item body:', newsData[0].body)
+        console.log('DashboardPage - First item body type:', typeof newsData[0].body)
+        console.log('DashboardPage - First item body length:', newsData[0].body?.length)
+        console.log('DashboardPage - All items with body:', newsData.filter(item => item.body && item.body.length > 0).length)
+        console.log('DashboardPage - All items body data:', newsData.map(item => ({ id: item.id, name: item.name, body: item.body, bodyLength: item.body?.length })))
+      }
+      
+      setLocalNews(newsData || [])
       
       // アカデミックサークルイベント
       const { data: eventsData, error: eventsError } = await supabase
@@ -329,26 +344,23 @@ export default function DashboardPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="text-lg">
-                            {getNewsCategoryIcon(news.category)}
+                          <span className="text-sm">
+                            {getNewsCategoryIcon(news.category || 'その他')}
                           </span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getNewsCategoryColor(news.category)}`}>
-                            {news.category}
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getNewsCategoryColor(news.category || 'その他')}`}>
+                            {news.category || 'その他'}
                           </span>
                         </div>
-                        <h4 className="font-semibold text-slate-900 text-sm mb-2 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2">
+                        <h4 className="font-semibold text-slate-900 text-sm mb-2 group-hover:text-blue-600 transition-colors duration-200 line-clamp-1">
                           {news.name}
                         </h4>
-                        {news.summary && (
-                          <p className="text-slate-600 text-sm leading-relaxed line-clamp-2 mb-3">
-                            {news.summary}
-                          </p>
-                        )}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 text-xs text-slate-500">
                             <span>{news.prefecture} {news.municipality}</span>
                             <span>•</span>
-                            <span>{new Date(news.created_at).toLocaleDateString('ja-JP')}</span>
+                            <span>
+                              {new Date(news.created_at).toLocaleDateString('ja-JP')}
+                            </span>
                           </div>
                           <div className="flex items-center gap-2">
                             {/* 詳細ボタン */}

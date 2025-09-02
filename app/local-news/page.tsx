@@ -48,7 +48,21 @@ export default function LocalNewsPage() {
         .select('*')
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('News fetch error:', error)
+        throw error
+      }
+      
+      // デバッグ情報を追加
+      console.log('LocalNewsPage - Fetched news data:', data)
+      if (data && data.length > 0) {
+        console.log('LocalNewsPage - First item body:', data[0].body)
+        console.log('LocalNewsPage - First item body type:', typeof data[0].body)
+        console.log('LocalNewsPage - First item body length:', data[0].body?.length)
+        console.log('LocalNewsPage - All items with body:', data.filter(item => item.body && item.body.length > 0).length)
+        console.log('LocalNewsPage - All items body data:', data.map(item => ({ id: item.id, name: item.name, body: item.body, bodyLength: item.body?.length })))
+      }
+      
       setNews(data || [])
       
       // 都道府県の一覧を抽出
@@ -228,24 +242,29 @@ export default function LocalNewsPage() {
               </div>
             </div>
 
-            {newsItem.summary && (
+            {/* 本文の表示 - bodyフィールドを優先して表示 */}
+            {newsItem.body ? (
+              <div className="mb-4">
+                <p className="text-gray-600 leading-relaxed line-clamp-3">
+                  {newsItem.body}
+                </p>
+                {newsItem.body.length > 150 && (
+                  <details className="mt-2 group">
+                    <summary className="cursor-pointer text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2">
+                      <span>全文を見る</span>
+                      <span className="text-xs text-gray-500">({newsItem.body.length}文字)</span>
+                    </summary>
+                    <div className="mt-2 p-3 bg-gray-50 rounded-md text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+                      {newsItem.body}
+                    </div>
+                  </details>
+                )}
+              </div>
+            ) : newsItem.summary ? (
               <p className="text-gray-600 mb-4 leading-relaxed line-clamp-3">
                 {newsItem.summary}
               </p>
-            )}
-
-            {newsItem.body && (
-              <div className="mb-4">
-                <details className="group">
-                  <summary className="cursor-pointer text-blue-600 hover:text-blue-800 font-medium">
-                    詳細を見る
-                  </summary>
-                  <div className="mt-2 p-3 bg-gray-50 rounded-md text-gray-700 text-sm leading-relaxed">
-                    {newsItem.body}
-                  </div>
-                </details>
-              </div>
-            )}
+            ) : null}
 
             <div className="flex items-center justify-between pt-4 border-t border-gray-100">
               <span className="text-sm text-gray-500">
