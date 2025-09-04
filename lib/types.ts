@@ -140,13 +140,21 @@ export interface Alert {
 // 検索結果用の型
 export interface SearchResult {
   id?: number
+  row_id?: string
   name: string
   summary?: string
-  prefecture: string
+  prefecture?: string
   municipality?: string
   source_name?: string
   url?: string
   tags?: string[]
+  organization?: string
+  target_audience?: string
+  amount?: string
+  period?: string
+  purpose?: string
+  status?: string
+  created_at?: string
   metadata?: Record<string, string | number | boolean | null>
 }
 

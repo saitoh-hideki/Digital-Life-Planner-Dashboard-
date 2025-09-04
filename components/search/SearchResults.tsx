@@ -1,6 +1,6 @@
 import { format } from 'date-fns'
 import { useState } from 'react'
-import { ExternalLink, Smartphone, Newspaper, Gift, MapPin, Building2, Calendar, Users, Smartphone as PlatformIcon, Eye } from 'lucide-react'
+import { ExternalLink, Smartphone, Newspaper, Gift, MapPin, Building2, Calendar, Users, Smartphone as PlatformIcon, Eye, DollarSign } from 'lucide-react'
 import { SearchResult } from '@/lib/types'
 import DetailModal from './DetailModal'
 
@@ -93,9 +93,17 @@ export default function SearchResults({
       if (applyEnd && typeof applyEnd === 'string') {
         items.push({ icon: <Calendar className="w-4 h-4" />, text: `締切: ${format(new Date(applyEnd), 'yyyy/MM/dd')}`, color: 'bg-red-100 text-red-700' })
       }
-      const audience = result.metadata.audience
+      const audience = result.metadata.target_audience || result.metadata.audience
       if (audience && typeof audience === 'string') {
         items.push({ icon: <Users className="w-4 h-4" />, text: audience, color: 'bg-purple-100 text-purple-700' })
+      }
+      const organization = result.metadata.organization
+      if (organization && typeof organization === 'string') {
+        items.push({ icon: <Building2 className="w-4 h-4" />, text: organization, color: 'bg-emerald-100 text-emerald-700' })
+      }
+      const amount = result.metadata.amount
+      if (amount && typeof amount === 'string') {
+        items.push({ icon: <DollarSign className="w-4 h-4" />, text: amount, color: 'bg-green-100 text-green-700' })
       }
     }
     

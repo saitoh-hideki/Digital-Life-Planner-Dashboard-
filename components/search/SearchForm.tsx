@@ -37,10 +37,8 @@ export default function SearchForm({ onSearch, searchType = 'apps' }: SearchForm
 
   // 都道府県が変更されたときに市町村をリセット
   useEffect(() => {
-    console.log('都道府県が変更されました:', prefecture)
     if (prefecture) {
       const municipalitiesList = getMunicipalitiesByPrefecture(prefecture)
-      console.log('取得された市町村リスト:', municipalitiesList)
       setAvailableMunicipalities(municipalitiesList)
     } else {
       setAvailableMunicipalities(defaultMunicipalities)

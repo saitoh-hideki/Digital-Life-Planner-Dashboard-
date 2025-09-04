@@ -55,6 +55,8 @@ export default function SubsidiesPage() {
       
       if (error) throw error
       
+      console.log('Loaded subsidies data:', data)
+      console.log('Number of subsidies:', data?.length || 0)
       setSubsidies(data || [])
       setHasSearched(true)
     } catch (error) {
@@ -66,43 +68,67 @@ export default function SubsidiesPage() {
   }
 
   const applyFilters = () => {
+    console.log('Applying filters:', filters)
+    console.log('Total subsidies:', subsidies.length)
+    
     let filtered = [...subsidies]
 
-    // Prefecture filter
+    // Prefecture filter - search in organization field
     if (filters.prefecture) {
-      filtered = filtered.filter(s => s.prefecture === filters.prefecture)
+      console.log('Filtering by prefecture:', filters.prefecture)
+      filtered = filtered.filter(s => 
+        s.organization?.includes(filters.prefecture)
+      )
+      console.log('After prefecture filter:', filtered.length)
     }
 
-    // Municipality filter
+    // Municipality filter - search in organization field
     if (filters.municipality) {
+      console.log('Filtering by municipality:', filters.municipality)
+      console.log('Data before municipality filter:', filtered.map(s => ({ 
+        organization: s.organization, 
+        name: s.name 
+      })))
       filtered = filtered.filter(s => 
-        s.municipality?.toLowerCase().includes(filters.municipality.toLowerCase())
+        s.organization?.toLowerCase().includes(filters.municipality.toLowerCase())
       )
+      console.log('After municipality filter:', filtered.length)
+      console.log('Data after municipality filter:', filtered.map(s => ({ 
+        organization: s.organization, 
+        name: s.name 
+      })))
     }
 
     // Keyword filter (searches in name, summary, organization, target_audience)
     if (filters.keyword) {
       const keyword = filters.keyword.toLowerCase()
+      console.log('Filtering by keyword:', keyword)
       filtered = filtered.filter(s => 
-        s.name.toLowerCase().includes(keyword) ||
+        s.name?.toLowerCase().includes(keyword) ||
         s.summary?.toLowerCase().includes(keyword) ||
         s.organization?.toLowerCase().includes(keyword) ||
         s.target_audience?.toLowerCase().includes(keyword)
       )
+      console.log('After keyword filter:', filtered.length)
     }
 
     // Status filter
     if (filters.status) {
+      console.log('Filtering by status:', filters.status)
       filtered = filtered.filter(s => s.status === filters.status)
+      console.log('After status filter:', filtered.length)
     }
 
     // Audience filter
     if (filters.audience) {
+      console.log('Filtering by audience:', filters.audience)
       filtered = filtered.filter(s => 
         s.target_audience?.toLowerCase().includes(filters.audience.toLowerCase())
       )
+      console.log('After audience filter:', filtered.length)
     }
 
+    console.log('Final filtered results:', filtered.length)
     setFilteredSubsidies(filtered)
     setCurrentPage(1) // Reset to first page when filters change
   }
@@ -132,10 +158,13 @@ export default function SubsidiesPage() {
   }
 
   // Pagination calculations
+  console.log('filteredSubsidies length:', filteredSubsidies.length)
+  console.log('filteredSubsidies sample:', filteredSubsidies.slice(0, 3))
   const totalPages = Math.ceil(filteredSubsidies.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
   const currentSubsidies = filteredSubsidies.slice(startIndex, endIndex)
+  console.log('currentSubsidies length:', currentSubsidies.length)
 
   // Get status badge info
   const getStatusBadge = (status: string) => {
@@ -214,12 +243,38 @@ export default function SubsidiesPage() {
         
         {/* Search and Filter Section */}
         <div className="bg-white rounded-2xl shadow-lg border border-slate-100 mb-8">
+          {/* Quick Search */}
+          <div className="p-6 border-b border-slate-100">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={filters.keyword}
+                    onChange={(e) => handleFilterChange('keyword', e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && applyFilters()}
+                    placeholder="補助金名、概要、対象者などで検索..."
+                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={() => applyFilters()}
+                className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium"
+              >
+                <Search className="w-4 h-4" />
+                検索
+              </button>
+            </div>
+          </div>
+
           {/* Filter Toggle Button */}
           <div className="p-6 border-b border-slate-100">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Search className="w-5 h-5 text-slate-500" />
-                <h2 className="text-lg font-semibold text-slate-900">検索・絞り込み</h2>
+                <Filter className="w-5 h-5 text-slate-500" />
+                <h2 className="text-lg font-semibold text-slate-900">詳細絞り込み</h2>
               </div>
               <button
                 onClick={() => setShowFilters(!showFilters)}
@@ -294,20 +349,6 @@ export default function SubsidiesPage() {
                   </select>
                 </div>
 
-                {/* Keyword Filter */}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    <Search className="w-4 h-4 inline mr-1" />
-                    キーワード検索
-                  </label>
-                  <input
-                    type="text"
-                    value={filters.keyword}
-                    onChange={(e) => handleFilterChange('keyword', e.target.value)}
-                    placeholder="補助金名、概要、対象者などで検索..."
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  />
-                </div>
 
                 {/* Audience Filter */}
                 <div>
@@ -324,13 +365,21 @@ export default function SubsidiesPage() {
                 </div>
               </div>
 
-              {/* Clear Filters Button */}
-              <div className="flex justify-end">
+              {/* Action Buttons */}
+              <div className="flex justify-between items-center">
                 <button
                   onClick={clearFilters}
                   className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded-lg transition-colors duration-200"
                 >
                   フィルターをクリア
+                </button>
+                
+                <button
+                  onClick={() => applyFilters()}
+                  className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium"
+                >
+                  <Search className="w-4 h-4" />
+                  検索実行
                 </button>
               </div>
             </div>

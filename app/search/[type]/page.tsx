@@ -51,7 +51,12 @@ export default function SearchPage() {
           provider: item.provider,
           apply_end: item.apply_end,
           audience: item.audience,
-          status: item.status
+          status: item.status,
+          organization: item.organization,
+          target_audience: item.target_audience,
+          amount: item.amount,
+          period: item.period,
+          purpose: item.purpose
         }
       }))
       
@@ -115,7 +120,7 @@ export default function SearchPage() {
       case 'apps':
         return 'local_apps'
       case 'subsidies':
-        return 'subsidies'
+        return 'subsidies_sheet'
       case 'news':
         return 'local_news'
       case 'local-news':
@@ -166,11 +171,21 @@ export default function SearchPage() {
       }
       
       if (params.municipality) {
-        query = query.ilike('municipality', `%${params.municipality}%`)
+        if (searchType === 'subsidies') {
+          // 補助金の場合はmunicipalityフィールドが存在しない可能性があるため、organizationで検索
+          query = query.or(`municipality.ilike.%${params.municipality}%,organization.ilike.%${params.municipality}%`)
+        } else {
+          query = query.ilike('municipality', `%${params.municipality}%`)
+        }
       }
       
       if (params.keyword) {
-        query = query.or(`name.ilike.%${params.keyword}%,summary.ilike.%${params.keyword}%`)
+        if (searchType === 'subsidies') {
+          // 補助金の場合は複数フィールドで検索
+          query = query.or(`name.ilike.%${params.keyword}%,summary.ilike.%${params.keyword}%,organization.ilike.%${params.keyword}%,target_audience.ilike.%${params.keyword}%`)
+        } else {
+          query = query.or(`name.ilike.%${params.keyword}%,summary.ilike.%${params.keyword}%`)
+        }
       }
       
       const { data, error } = await query
@@ -187,7 +202,12 @@ export default function SearchPage() {
           provider: item.provider,
           apply_end: item.apply_end,
           audience: item.audience,
-          status: item.status
+          status: item.status,
+          organization: item.organization,
+          target_audience: item.target_audience,
+          amount: item.amount,
+          period: item.period,
+          purpose: item.purpose
         }
       }))
       
