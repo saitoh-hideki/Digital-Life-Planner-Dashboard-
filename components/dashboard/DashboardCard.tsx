@@ -6,6 +6,7 @@ import { ArrowRight, Search } from 'lucide-react'
 
 interface DashboardCardProps {
   title: string
+  subtitle?: string
   icon: ReactNode
   children: ReactNode
   linkText?: string
@@ -15,6 +16,7 @@ interface DashboardCardProps {
 
 export default function DashboardCard({
   title,
+  subtitle,
   icon,
   children,
   linkText,
@@ -28,7 +30,12 @@ export default function DashboardCard({
           <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl text-2xl border border-blue-100">
             {icon}
           </div>
-          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+            {subtitle && (
+              <p className="text-sm text-slate-600 mt-1">{subtitle}</p>
+            )}
+          </div>
         </div>
         {linkText && linkHref && (
           <Link

@@ -9,9 +9,10 @@ import InfoItem from '@/components/dashboard/InfoItem'
 import LocalNewsCard from '@/components/dashboard/LocalNewsCard'
 import SubsidyDetailModal from '@/components/subsidies/SubsidyDetailModal'
 import LocalNewsDetailModal from '@/components/dashboard/LocalNewsDetailModal'
+import DigitalSafetyNewsList from '@/components/news/DigitalSafetyNewsList'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { Calendar, FileText, Archive, Settings, Shield, Eye, ExternalLink } from 'lucide-react'
+import { Calendar, FileText, Archive, Settings, Shield, Eye, ExternalLink, MapPin, ShieldAlert } from 'lucide-react'
 import Link from 'next/link'
 import { canAccessAdmin } from '@/lib/auth'
 
@@ -210,16 +211,77 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* 1段目：本日のトピック（フル幅・カードスタイル） */}
+          {/* 1段目：地域ハイライト（フル幅・カードスタイル） */}
           <div className="col-span-full">
             <DashboardCard
-              title="本日のトピック"
-              icon="📰"
+              title="地域ハイライト"
+              subtitle="あなたの地域の最新情報をピックアップ"
+              icon={<MapPin className="w-5 h-5" />}
               linkText="すべて見る"
-              linkHref="/archive"
+              linkHref="/local-news"
               fullWidth
             >
-              <TopicCarousel topics={topics} />
+              {localNews.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {localNews.map((news) => (
+                    <div key={news.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-sm">
+                              {getNewsCategoryIcon(news.category || 'その他')}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getNewsCategoryColor(news.category || 'その他')}`}>
+                              {news.category || 'その他'}
+                            </span>
+                          </div>
+                          <h4 className="font-semibold text-slate-900 text-sm mb-2 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2">
+                            {news.name}
+                          </h4>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-xs text-slate-500">
+                              <span>{news.prefecture} {news.municipality}</span>
+                              <span>•</span>
+                              <span>
+                                {new Date(news.created_at).toLocaleDateString('ja-JP')}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {/* 詳細ボタン */}
+                              <button
+                                onClick={() => showNewsDetail(news)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-xs font-medium transition-colors duration-200"
+                              >
+                                <Eye className="w-3 h-3" />
+                                詳細
+                              </button>
+                              {/* URLボタン */}
+                              {news.source_url && (
+                                <a
+                                  href={news.source_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg text-xs font-medium transition-colors duration-200"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  URL
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto mb-4 text-slate-300">
+                    <MapPin className="w-full h-full" />
+                  </div>
+                  <p className="text-slate-500 text-sm">地域ハイライト情報はまだありません</p>
+                </div>
+              )}
             </DashboardCard>
           </div>
 
@@ -330,76 +392,19 @@ export default function DashboardPage() {
             )}
           </DashboardCard>
 
-          {/* 地域ニュースカードを更新 */}
+          {/* デジタル安心・安全カード */}
           <DashboardCard
-            title="地域ニュース"
-            icon="📝"
+            title="デジタル安心・安全"
+            subtitle="詐欺・セキュリティ・プライバシーの注意と対策"
+            icon={<ShieldAlert className="w-5 h-5" />}
             linkText="すべて見る"
             linkHref="/local-news"
           >
-            {localNews.length > 0 ? (
-              <div className="space-y-4">
-                {localNews.map((news) => (
-                  <div key={news.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-sm">
-                            {getNewsCategoryIcon(news.category || 'その他')}
-                          </span>
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getNewsCategoryColor(news.category || 'その他')}`}>
-                            {news.category || 'その他'}
-                          </span>
-                        </div>
-                        <h4 className="font-semibold text-slate-900 text-sm mb-2 group-hover:text-blue-600 transition-colors duration-200 line-clamp-1">
-                          {news.name}
-                        </h4>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-xs text-slate-500">
-                            <span>{news.prefecture} {news.municipality}</span>
-                            <span>•</span>
-                            <span>
-                              {new Date(news.created_at).toLocaleDateString('ja-JP')}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {/* 詳細ボタン */}
-                            <button
-                              onClick={() => showNewsDetail(news)}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-xs font-medium transition-colors duration-200"
-                            >
-                              <Eye className="w-3 h-3" />
-                              詳細
-                            </button>
-                            {/* URLボタン */}
-                            {news.source_url && (
-                              <a
-                                href={news.source_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg text-xs font-medium transition-colors duration-200"
-                              >
-                                <ExternalLink className="w-3 h-3" />
-                                URL
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 mx-auto mb-4 text-slate-300">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-                  </svg>
-                </div>
-                <p className="text-slate-500 text-sm">地域ニュース情報はまだありません</p>
-              </div>
-            )}
+            <DigitalSafetyNewsList 
+              news={localNews} 
+              onNewsClick={showNewsDetail}
+              limit={3}
+            />
           </DashboardCard>
 
           {/* 3段目：3カラム */}
