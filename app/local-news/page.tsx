@@ -53,16 +53,6 @@ export default function LocalNewsPage() {
         throw error
       }
       
-      // デバッグ情報を追加
-      console.log('LocalNewsPage - Fetched news data:', data)
-      if (data && data.length > 0) {
-        console.log('LocalNewsPage - First item body:', data[0].body)
-        console.log('LocalNewsPage - First item body type:', typeof data[0].body)
-        console.log('LocalNewsPage - First item body length:', data[0].body?.length)
-        console.log('LocalNewsPage - All items with body:', data.filter(item => item.body && item.body.length > 0).length)
-        console.log('LocalNewsPage - All items body data:', data.map(item => ({ id: item.id, name: item.name, body: item.body, bodyLength: item.body?.length })))
-      }
-      
       setNews(data || [])
       
       // 都道府県の一覧を抽出

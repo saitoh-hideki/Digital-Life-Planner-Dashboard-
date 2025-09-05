@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import ActionsButton from "@/components/dashboard/ActionsButton";
-import AlertsButton from "@/components/dashboard/AlertsButton";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -32,7 +31,6 @@ export default function RootLayout({
                 </p>
               </div>
               <div className="flex items-center gap-4">
-                <AlertsButton />
                 <ActionsButton />
               </div>
             </div>

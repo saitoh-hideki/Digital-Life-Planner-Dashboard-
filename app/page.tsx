@@ -106,15 +106,6 @@ export default function DashboardPage() {
         throw newsError
       }
       
-      // デバッグ情報を追加
-      console.log('DashboardPage - Fetched news data:', newsData)
-      if (newsData && newsData.length > 0) {
-        console.log('DashboardPage - First item body:', newsData[0].body)
-        console.log('DashboardPage - First item body type:', typeof newsData[0].body)
-        console.log('DashboardPage - First item body length:', newsData[0].body?.length)
-        console.log('DashboardPage - All items with body:', newsData.filter(item => item.body && item.body.length > 0).length)
-        console.log('DashboardPage - All items body data:', newsData.map(item => ({ id: item.id, name: item.name, body: item.body, bodyLength: item.body?.length })))
-      }
       
       setLocalNews(newsData || [])
       
@@ -163,7 +154,6 @@ export default function DashboardPage() {
     { name: '地域ニュース', href: '/admin/news', icon: '📝' },
     { name: 'アカデミックサークル', href: '/admin/events', icon: '🎓' },
     { name: '地域媒体ナレッジ', href: '/admin/knowledge', icon: '📖' },
-    { name: 'Alerts管理', href: '/admin/alerts', icon: '⚠️' },
     { name: 'ニュースアーカイブ', href: '/admin/archive', icon: '📂' }
   ]
 
