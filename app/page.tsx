@@ -12,8 +12,11 @@ import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Calendar, FileText, Archive, Settings, Shield, Eye, ExternalLink, MapPin, ShieldAlert } from 'lucide-react'
 import Link from 'next/link'
+import { useRegion } from '@/components/providers/RegionProvider'
+import { prefectureToQuery } from '@/lib/region'
 
 export default function DashboardPage() {
+  const { region } = useRegion()
   const [topics, setTopics] = useState<Topic[]>([])
   const [localApps, setLocalApps] = useState<LocalApp[]>([])
   const [subsidies, setSubsidies] = useState<Subsidy[]>([])
@@ -28,12 +31,10 @@ export default function DashboardPage() {
   const [isSubsidyModalOpen, setIsSubsidyModalOpen] = useState(false)
   const [selectedNews, setSelectedNews] = useState<LocalNews | null>(null)
   const [isNewsModalOpen, setIsNewsModalOpen] = useState(false)
-  const [selectedPrefecture, setSelectedPrefecture] = useState<string>('all')
-  const [prefectures, setPrefectures] = useState<string[]>([])
 
   useEffect(() => {
     fetchDashboardData()
-  }, [])
+  }, [region])
 
   const showSubsidyDetail = (subsidy: Subsidy) => {
     setSelectedSubsidy(subsidy)
@@ -49,6 +50,11 @@ export default function DashboardPage() {
     try {
       setError(null)
       setLoading(true)
+      
+      const regionQuery = prefectureToQuery(region)
+      
+      // 地域フィルタリング用のクエリ条件
+      const regionFilter = regionQuery === 'all' ? {} : { prefecture: region }
       
       const [
         { data: topicsData, error: topicsError },
@@ -73,15 +79,17 @@ export default function DashboardPage() {
       if (eventsError) throw eventsError
       if (knowledgeError) throw knowledgeError
 
+      // 地域フィルタリングを適用
+      const filteredNews = regionQuery === 'all' 
+        ? newsData || []
+        : (newsData || []).filter(news => news.prefecture === region)
+
       setTopics(topicsData || [])
       setSubsidies(subsidiesData || [])
       setLocalApps(appsData || [])
-      setLocalNews(newsData || [])
+      setLocalNews(filteredNews)
       setEvents(eventsData || [])
       setKnowledge(knowledgeData || [])
-
-      const uniquePrefectures = [...new Set(newsData?.map(item => item.prefecture) || [])]
-      setPrefectures(uniquePrefectures.sort())
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -134,9 +142,8 @@ export default function DashboardPage() {
     )
   }
 
-  const filteredNews = selectedPrefecture === 'all' 
-    ? localNews 
-    : localNews.filter(news => news.prefecture === selectedPrefecture)
+  // 地域フィルタリングは既にfetchDashboardDataで適用済み
+  const filteredNews = localNews
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -159,27 +166,8 @@ export default function DashboardPage() {
               linkText="すべて見る"
               linkHref="/local-news"
               fullWidth
+              region={region}
             >
-              <div className="mb-6">
-                <div className="flex items-center gap-4">
-                  <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    表示地域:
-                  </label>
-                  <select
-                    value={selectedPrefecture}
-                    onChange={(e) => setSelectedPrefecture(e.target.value)}
-                    className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="all">すべての地域</option>
-                    {prefectures.map((prefecture) => (
-                      <option key={prefecture} value={prefecture}>
-                        {prefecture}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
 
               {filteredNews.length > 0 ? (
                 <div className="overflow-x-auto" style={{
@@ -243,9 +231,9 @@ export default function DashboardPage() {
                     <MapPin className="w-full h-full" />
                   </div>
                   <p className="text-slate-500 text-sm">
-                    {selectedPrefecture === 'all' 
+                    {region === '全国' 
                       ? '地域ハイライト情報はまだありません' 
-                      : `${selectedPrefecture}の地域ニュースはまだありません`}
+                      : `${region}の地域ニュースはまだありません`}
                   </p>
                 </div>
               )}
@@ -257,6 +245,7 @@ export default function DashboardPage() {
             icon="💰"
             linkText="検索へ"
             linkHref="/subsidies"
+            region={region}
           >
             {subsidies.length > 0 ? (
               <div className="space-y-4">
@@ -317,6 +306,7 @@ export default function DashboardPage() {
             icon="📱"
             linkText="検索へ"
             linkHref="/search/apps"
+            region={region}
           >
             {localApps.length > 0 ? (
               <div className="space-y-4">
@@ -352,6 +342,7 @@ export default function DashboardPage() {
             icon={<ShieldAlert className="w-5 h-5" />}
             linkText="すべて見る"
             linkHref="/local-news"
+            region={region}
           >
             <DigitalSafetyNewsList 
               news={localNews} 
@@ -365,6 +356,7 @@ export default function DashboardPage() {
             icon="🎓"
             linkText="すべて見る"
             linkHref="/events"
+            region={region}
           >
             {events.length > 0 ? (
               <div className="space-y-4">
@@ -398,6 +390,7 @@ export default function DashboardPage() {
             icon="📖"
             linkText="すべて見る"
             linkHref="/knowledge"
+            region={region}
           >
             {knowledge.length > 0 ? (
               <div className="space-y-4">
@@ -463,6 +456,7 @@ export default function DashboardPage() {
             icon="📂"
             linkText="すべて見る"
             linkHref="/archive"
+            region={region}
           >
             <div className="space-y-6">
               <div className="space-y-4">

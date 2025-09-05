@@ -12,6 +12,7 @@ interface DashboardCardProps {
   linkText?: string
   linkHref?: string
   fullWidth?: boolean
+  region?: string
 }
 
 export default function DashboardCard({
@@ -21,7 +22,8 @@ export default function DashboardCard({
   children,
   linkText,
   linkHref,
-  fullWidth = false
+  fullWidth = false,
+  region
 }: DashboardCardProps) {
   return (
     <div className={`card-modern p-6 hover:shadow-xl transition-all duration-300 ${fullWidth ? 'col-span-full' : ''}`}>
@@ -31,7 +33,12 @@ export default function DashboardCard({
             {icon}
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+              {region && (
+                <span className="text-xs text-gray-500">（{region}）</span>
+              )}
+            </div>
             {subtitle && (
               <p className="text-sm text-slate-600 mt-1">{subtitle}</p>
             )}
