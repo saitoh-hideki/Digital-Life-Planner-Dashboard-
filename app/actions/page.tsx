@@ -36,7 +36,7 @@ export default function ActionsPage() {
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary | null>(null)
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const [showConfetti, setShowConfetti] = useState(false)
+  const [showConfetti] = useState(false)
   const [isSupporterSelectorOpen, setIsSupporterSelectorOpen] = useState(false)
   const [selectedSupporter, setSelectedSupporter] = useState<Supporter | null>(null)
 
@@ -324,7 +324,7 @@ export default function ActionsPage() {
       
       // 成功メッセージを表示
       setError(null)
-      alert('当日のタスクを全て削除しました')
+      window.alert('当日のタスクを全て削除しました')
     } catch (error) {
       console.error('Error resetting tasks:', error)
       setError('タスクのリセットに失敗しました')
@@ -340,7 +340,7 @@ export default function ActionsPage() {
     })
     
     // クラッカー演出を表示
-    setShowConfetti(true)
+    // setShowConfetti(true)
   }
 
 

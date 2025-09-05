@@ -4,9 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Topic, LocalApp, Subsidy, LocalNews, LocalNewsCategory, AcademicCircleEvent, LocalMediaKnowledge } from '@/lib/types'
 import DashboardCard from '@/components/dashboard/DashboardCard'
-import TopicCarousel from '@/components/dashboard/TopicCarousel'
 import InfoItem from '@/components/dashboard/InfoItem'
-import LocalNewsCard from '@/components/dashboard/LocalNewsCard'
 import SubsidyDetailModal from '@/components/subsidies/SubsidyDetailModal'
 import LocalNewsDetailModal from '@/components/dashboard/LocalNewsDetailModal'
 import DigitalSafetyNewsList from '@/components/news/DigitalSafetyNewsList'
@@ -14,7 +12,6 @@ import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Calendar, FileText, Archive, Settings, Shield, Eye, ExternalLink, MapPin, ShieldAlert } from 'lucide-react'
 import Link from 'next/link'
-import { canAccessAdmin } from '@/lib/auth'
 
 export default function DashboardPage() {
   const [topics, setTopics] = useState<Topic[]>([])
@@ -26,7 +23,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [canAccessAdminPanel, setCanAccessAdminPanel] = useState(false)
+  const [canAccessAdminPanel, setCanAccessAdminPanel] = useState(true)
   const [selectedSubsidy, setSelectedSubsidy] = useState<Subsidy | null>(null)
   const [isSubsidyModalOpen, setIsSubsidyModalOpen] = useState(false)
   const [selectedNews, setSelectedNews] = useState<LocalNews | null>(null)
@@ -36,21 +33,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDashboardData()
-    checkAdminAccess()
   }, [])
-
-  const checkAdminAccess = async () => {
-    try {
-      // 一時的に権限チェックを無効化して、すべてのユーザーが管理者画面にアクセス可能にする
-      setCanAccessAdminPanel(true)
-      // 本来の権限チェック（後で有効化）
-      // const hasAccess = await canAccessAdmin()
-      // setCanAccessAdminPanel(hasAccess)
-    } catch (error) {
-      console.error('Error checking admin access:', error)
-      setCanAccessAdminPanel(false)
-    }
-  }
 
   const showSubsidyDetail = (subsidy: Subsidy) => {
     setSelectedSubsidy(subsidy)
@@ -65,80 +48,41 @@ export default function DashboardPage() {
   const fetchDashboardData = async () => {
     try {
       setError(null)
+      setLoading(true)
       
-      // 本日のトピック
-      const { data: topicsData, error: topicsError } = await supabase
-        .from('topics')
-        .select('*')
-        .eq('is_today', true)
-        .order('published_at', { ascending: false })
-        .limit(10)
-      
+      const [
+        { data: topicsData, error: topicsError },
+        { data: subsidiesData, error: subsidiesError },
+        { data: appsData, error: appsError },
+        { data: newsData, error: newsError },
+        { data: eventsData, error: eventsError },
+        { data: knowledgeData, error: knowledgeError }
+      ] = await Promise.all([
+        supabase.from('topics').select('*').eq('is_today', true).order('published_at', { ascending: false }).limit(10),
+        supabase.from('subsidies_sheet').select('*').order('created_at', { ascending: false }).limit(3),
+        supabase.from('local_apps').select('*').order('id', { ascending: false }).limit(3),
+        supabase.from('local_news').select('*').order('created_at', { ascending: false }).limit(50),
+        supabase.from('academic_circle_events').select('*').gte('event_date', new Date().toISOString().split('T')[0]).order('event_date', { ascending: true }).limit(5),
+        supabase.from('local_media_knowledge').select('*').order('created_at', { ascending: false }).limit(3)
+      ])
+
       if (topicsError) throw topicsError
-      
-      // 補助金・助成金（subsidies_sheetテーブルから取得）
-      const { data: subsidiesData, error: subsidiesError } = await supabase
-        .from('subsidies_sheet')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(3)
-      
       if (subsidiesError) throw subsidiesError
-      
-      // 地域アプリ - updated_onカラムが存在しない場合はidでソート
-      const { data: appsData, error: appsError } = await supabase
-        .from('local_apps')
-        .select('*')
-        .order('id', { ascending: false })
-        .limit(3)
-      
       if (appsError) throw appsError
-      
-      // 地域ニュース（すべて取得してフィルタリング）
-      const { data: newsData, error: newsError } = await supabase
-        .from('local_news')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50)
-      
-      if (newsError) {
-        console.error('News error:', newsError)
-        throw newsError
-      }
-      
-      
-      setLocalNews(newsData || [])
-      
-      // 都道府県の一覧を抽出
-      const uniquePrefectures = [...new Set(newsData?.map(item => item.prefecture) || [])]
-      setPrefectures(uniquePrefectures.sort())
-      
-      // アカデミックサークルイベント
-      const { data: eventsData, error: eventsError } = await supabase
-        .from('academic_circle_events')
-        .select('*')
-        .gte('event_date', new Date().toISOString().split('T')[0])
-        .order('event_date', { ascending: true })
-        .order('start_time', { ascending: true })
-        .limit(5)
-      
+      if (newsError) throw newsError
       if (eventsError) throw eventsError
-      
-      // 地域媒体ナレッジ
-      const { data: knowledgeData, error: knowledgeError } = await supabase
-        .from('local_media_knowledge')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(3)
-      
       if (knowledgeError) throw knowledgeError
-      
+
       setTopics(topicsData || [])
       setSubsidies(subsidiesData || [])
       setLocalApps(appsData || [])
       setLocalNews(newsData || [])
       setEvents(eventsData || [])
       setKnowledge(knowledgeData || [])
+
+      const uniquePrefectures = [...new Set(newsData?.map(item => item.prefecture) || [])]
+      setPrefectures(uniquePrefectures.sort())
+
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
       setError('データの取得中にエラーが発生しました')
@@ -181,7 +125,7 @@ export default function DashboardPage() {
           <p className="text-red-700 mb-4">{error}</p>
           <button
             onClick={fetchDashboardData}
-            className="btn-primary"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             再試行
           </button>
@@ -190,24 +134,23 @@ export default function DashboardPage() {
     )
   }
 
+  const filteredNews = selectedPrefecture === 'all' 
+    ? localNews 
+    : localNews.filter(news => news.prefecture === selectedPrefecture)
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      {/* メインコンテンツ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* ページタイトルとアラートボタン */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">
-              Digital Life Planner
-            </h1>
-            <p className="text-slate-600">
-              Your Hub for Learning, Planning, and Acting
-            </p>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">
+            Digital Life Planner
+          </h1>
+          <p className="text-slate-600">
+            Your Hub for Learning, Planning, and Acting
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* 1段目：地域ハイライト（フル幅・カードスタイル） */}
           <div className="col-span-full">
             <DashboardCard
               title="地域ハイライト"
@@ -217,7 +160,6 @@ export default function DashboardPage() {
               linkHref="/local-news"
               fullWidth
             >
-              {/* 地域選択フィルター */}
               <div className="mb-6">
                 <div className="flex items-center gap-4">
                   <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
@@ -239,84 +181,77 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* フィルタリングされたニュース */}
-              {(() => {
-                const filteredNews = selectedPrefecture === 'all' 
-                  ? localNews 
-                  : localNews.filter(news => news.prefecture === selectedPrefecture)
-                
-                return filteredNews.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <div className="flex gap-4 pb-4" style={{ width: 'max-content' }}>
-                      {filteredNews.slice(0, 10).map((news) => (
-                        <div key={news.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group flex-shrink-0 w-80">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="text-sm">
-                                  {getNewsCategoryIcon(news.category || 'その他')}
-                                </span>
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getNewsCategoryColor(news.category || 'その他')}`}>
-                                  {news.category || 'その他'}
+              {filteredNews.length > 0 ? (
+                <div className="overflow-x-auto" style={{
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: '#cbd5e1 #f1f5f9'
+                }}>
+                  <div className="flex gap-4 pb-4" style={{ width: 'max-content' }}>
+                    {filteredNews.slice(0, 10).map((news) => (
+                      <div key={news.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group flex-shrink-0 w-80">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-sm">
+                                {getNewsCategoryIcon(news.category || 'その他')}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getNewsCategoryColor(news.category || 'その他')}`}>
+                                {news.category || 'その他'}
+                              </span>
+                            </div>
+                            <h4 className="font-semibold text-slate-900 text-sm mb-2 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2">
+                              {news.name}
+                            </h4>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 text-xs text-slate-500">
+                                <span>{news.prefecture} {news.municipality}</span>
+                                <span>•</span>
+                                <span>
+                                  {new Date(news.created_at).toLocaleDateString('ja-JP')}
                                 </span>
                               </div>
-                              <h4 className="font-semibold text-slate-900 text-sm mb-2 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2">
-                                {news.name}
-                              </h4>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-xs text-slate-500">
-                                  <span>{news.prefecture} {news.municipality}</span>
-                                  <span>•</span>
-                                  <span>
-                                    {new Date(news.created_at).toLocaleDateString('ja-JP')}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {/* 詳細ボタン */}
-                                  <button
-                                    onClick={() => showNewsDetail(news)}
-                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-xs font-medium transition-colors duration-200"
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => showNewsDetail(news)}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-xs font-medium transition-colors duration-200"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                  詳細
+                                </button>
+                                {news.source_url && (
+                                  <a
+                                    href={news.source_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg text-xs font-medium transition-colors duration-200"
                                   >
-                                    <Eye className="w-3 h-3" />
-                                    詳細
-                                  </button>
-                                  {/* URLボタン */}
-                                  {news.source_url && (
-                                    <a
-                                      href={news.source_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg text-xs font-medium transition-colors duration-200"
-                                    >
-                                      <ExternalLink className="w-3 h-3" />
-                                      URL
-                                    </a>
-                                  )}
-                                </div>
+                                    <ExternalLink className="w-3 h-3" />
+                                    URL
+                                  </a>
+                                )}
                               </div>
                             </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 mx-auto mb-4 text-slate-300">
-                      <MapPin className="w-full h-full" />
-                    </div>
-                    <p className="text-slate-500 text-sm">
-                      {selectedPrefecture === 'all' 
-                        ? '地域ハイライト情報はまだありません' 
-                        : `${selectedPrefecture}の地域ニュースはまだありません`}
-                    </p>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto mb-4 text-slate-300">
+                    <MapPin className="w-full h-full" />
                   </div>
-                )
-              })()}
+                  <p className="text-slate-500 text-sm">
+                    {selectedPrefecture === 'all' 
+                      ? '地域ハイライト情報はまだありません' 
+                      : `${selectedPrefecture}の地域ニュースはまだありません`}
+                  </p>
+                </div>
+              )}
             </DashboardCard>
           </div>
 
-          {/* 2段目：3カラム */}
           <DashboardCard
             title="補助金・助成金"
             icon="💰"
@@ -340,7 +275,6 @@ export default function DashboardPage() {
                             {subsidy.organization}
                           </span>
                           <div className="flex items-center gap-2">
-                            {/* 詳細ボタン */}
                             <button
                               onClick={() => showSubsidyDetail(subsidy)}
                               className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-xs font-medium transition-colors duration-200"
@@ -348,7 +282,6 @@ export default function DashboardPage() {
                               <Eye className="w-3 h-3" />
                               詳細
                             </button>
-                            {/* URLボタン */}
                             {subsidy.url && (
                               <a
                                 href={subsidy.url}
@@ -363,16 +296,6 @@ export default function DashboardPage() {
                           </div>
                         </div>
                       </div>
-                      {subsidy.status && (
-                        <span className={`px-3 py-2 rounded-lg text-xs font-semibold flex-shrink-0 ${
-                          getSubsidyStatusColorFromStatus(subsidy.status) === 'green' ? 'bg-green-100 text-green-800' :
-                          getSubsidyStatusColorFromStatus(subsidy.status) === 'orange' ? 'bg-orange-100 text-orange-800' :
-                          getSubsidyStatusColorFromStatus(subsidy.status) === 'gray' ? 'bg-gray-100 text-gray-800' :
-                          'bg-blue-100 text-blue-800'
-                        }`}>
-                          {subsidy.status}
-                        </span>
-                      )}
                     </div>
                   </div>
                 ))}
@@ -423,7 +346,6 @@ export default function DashboardPage() {
             )}
           </DashboardCard>
 
-          {/* デジタル安心・安全カード */}
           <DashboardCard
             title="デジタル安心・安全"
             subtitle="詐欺・セキュリティ・プライバシーの注意と対策"
@@ -438,7 +360,6 @@ export default function DashboardPage() {
             />
           </DashboardCard>
 
-          {/* 3段目：3カラム */}
           <DashboardCard
             title="アカデミックサークル"
             icon="🎓"
@@ -468,12 +389,6 @@ export default function DashboardPage() {
                 </div>
                 <p className="text-slate-500 text-lg mb-2">イベント情報はまだありません</p>
                 <p className="text-slate-400 text-sm">新しいイベントが登録されると、ここに表示されます</p>
-                <Link
-                  href="/admin/events"
-                  className="inline-flex items-center gap-2 px-4 py-2 mt-3 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
-                >
-                  イベントを追加
-                </Link>
               </div>
             )}
           </DashboardCard>
@@ -489,21 +404,15 @@ export default function DashboardPage() {
                 {knowledge.map((item) => (
                   <div key={item.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group">
                     <div className="flex items-start justify-between gap-3">
-                      {/* 左側：ファイル種別アイコン */}
                       <div className="flex-shrink-0">
                         <div className={`w-10 h-10 bg-gradient-to-br ${getFileTypeBackground(item.file_name || null)} rounded-full flex items-center justify-center text-white text-lg shadow-lg`}>
                           {getFileTypeIcon(item.file_name || null)}
                         </div>
                       </div>
-                      
-                      {/* 中央：ファイル情報 */}
                       <div className="flex-1 min-w-0">
-                        {/* タイトル */}
                         <h4 className="font-semibold text-slate-900 text-sm mb-2 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2">
                           {item.title || item.file_name || `ファイル ${item.id}`}
                         </h4>
-                        
-                        {/* 地域情報 */}
                         {item.region && (
                           <div className="flex items-center gap-1 mb-1">
                             <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">
@@ -511,16 +420,12 @@ export default function DashboardPage() {
                             </span>
                           </div>
                         )}
-                        
-                        {/* 作成日 */}
                         {item.created_at && (
                           <div className="text-xs text-slate-500">
                             {format(new Date(item.created_at), 'yyyy/MM/dd')}
                           </div>
                         )}
                       </div>
-                      
-                      {/* 右側：操作ボタン */}
                       {item.url && item.url !== 'EMPTY' ? (
                         <a
                           href={item.url}
@@ -587,10 +492,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 設定ボタン（画面右下固定） */}
       <div className="fixed bottom-6 right-6 z-[9999]">
         <div className="relative flex flex-col gap-3">
-          {/* 管理者画面への移動ボタン（権限がある場合のみ表示） */}
           {canAccessAdminPanel && (
             <Link
               href="/admin"
@@ -601,7 +504,6 @@ export default function DashboardPage() {
             </Link>
           )}
           
-          {/* 設定ボタン */}
           <button
             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
             className="flex items-center justify-center w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300"
@@ -610,16 +512,12 @@ export default function DashboardPage() {
             <Settings className="w-6 h-6" />
           </button>
           
-          {/* ドリルダウンメニュー */}
           {isSettingsOpen && (
             <>
-              {/* オーバーレイ */}
               <div 
                 className="fixed inset-0 z-[9998]"
                 onClick={() => setIsSettingsOpen(false)}
               />
-              
-              {/* メニュー */}
               <div className="absolute bottom-full right-0 mb-3 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 py-3 z-[9999]">
                 <div className="px-4 py-2 border-b border-slate-100">
                   <h3 className="text-sm font-semibold text-slate-900">管理メニュー</h3>
@@ -648,7 +546,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 補助金・助成金詳細モーダル */}
       {selectedSubsidy && (
         <SubsidyDetailModal
           subsidy={selectedSubsidy}
@@ -660,7 +557,6 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* 地域ニュース詳細モーダル */}
       {selectedNews && (
         <LocalNewsDetailModal
           news={selectedNews}
@@ -673,32 +569,6 @@ export default function DashboardPage() {
       )}
     </div>
   )
-}
-
-// ヘルパー関数
-function getSubsidyStatusColorFromStatus(status: string): string {
-  if (!status) return 'gray'
-  
-  const normalized = status.toLowerCase().trim()
-  
-  if (normalized.includes('募集中') || normalized.includes('受付中') || 
-      normalized.includes('open') || normalized.includes('active')) {
-    return 'green'
-  }
-  
-  if (normalized.includes('募集終了') || normalized.includes('受付終了') || 
-      normalized.includes('締切') || normalized.includes('closed') || 
-      normalized.includes('終了')) {
-    return 'gray'
-  }
-  
-  if (normalized.includes('予定') || normalized.includes('準備中') || 
-      normalized.includes('近日') || normalized.includes('coming') || 
-      normalized.includes('soon')) {
-    return 'orange'
-  }
-  
-  return 'blue' // デフォルト
 }
 
 function getFileTypeBackground(fileName: string | null): string {

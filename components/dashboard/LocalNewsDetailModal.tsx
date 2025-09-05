@@ -66,7 +66,7 @@ export default function LocalNewsDetailModal({ news, isOpen, onClose }: LocalNew
     }
   }
 
-  const categoryBadge = getCategoryBadge(news.category)
+  const categoryBadge = getCategoryBadge(news.category || 'その他')
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">

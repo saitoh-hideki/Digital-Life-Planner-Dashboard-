@@ -83,7 +83,7 @@ export default function AlertDetailModal({ alert, isOpen, onClose }: AlertDetail
         // Fallback: copy to clipboard
         const text = `${alert.title_ja || alert.title_original}\n\n${alert.summary_ja || alert.summary_original || ''}\n\n詳細: ${alert.url}`
         await navigator.clipboard.writeText(text)
-        alert('情報をクリップボードにコピーしました')
+        window.alert('情報をクリップボードにコピーしました')
       }
     } catch (error) {
       console.error('Error sharing:', error)

@@ -57,13 +57,23 @@ export default function LocalNewsCard() {
         console.log('LocalNewsCard - First item summary length:', data[0].summary?.length)
         console.log('LocalNewsCard - All items with body:', data.filter(item => item.body && item.body.length > 0).length)
         console.log('LocalNewsCard - All items with summary:', data.filter(item => item.summary && item.summary.length > 0).length)
+        
+        // URLのデバッグ情報を追加
+        console.log('LocalNewsCard - URL Debug Info:')
+        data.forEach((item, index) => {
+          if (item.source_url) {
+            console.log(`Item ${index + 1} (${item.name}):`, item.source_url)
+          }
+        })
+        
         console.log('LocalNewsCard - All items body data:', data.map(item => ({ 
           id: item.id, 
           name: item.name, 
           body: item.body, 
           bodyLength: item.body?.length,
           summary: item.summary,
-          summaryLength: item.summary?.length
+          summaryLength: item.summary?.length,
+          sourceUrl: item.source_url
         })))
       }
       
@@ -89,7 +99,9 @@ export default function LocalNewsCard() {
 
   // カテゴリ別の件数
   const categoryCounts = news.reduce((acc, item) => {
-    acc[item.category] = (acc[item.category] || 0) + 1
+    if (item.category) {
+      acc[item.category] = (acc[item.category] || 0) + 1
+    }
     return acc
   }, {} as Record<LocalNewsCategory, number>)
 
@@ -171,12 +183,12 @@ export default function LocalNewsCard() {
             >
               <div className="flex items-start gap-3">
                 <div className="text-2xl">
-                  {CATEGORY_ICONS[newsItem.category]}
+                  {newsItem.category && CATEGORY_ICONS[newsItem.category]}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${CATEGORY_COLORS[newsItem.category]}`}>
-                      {newsItem.category}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${newsItem.category ? CATEGORY_COLORS[newsItem.category] : 'bg-gray-100 text-gray-800 border-gray-200'}`}>
+                      {newsItem.category || '未分類'}
                     </span>
                     <span className="text-sm text-gray-500 flex items-center gap-1">
                       <MapPin className="w-3 h-3" />

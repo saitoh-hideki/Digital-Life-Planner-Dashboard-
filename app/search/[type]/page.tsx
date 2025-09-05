@@ -25,7 +25,7 @@ export default function SearchPage() {
   const performInitialSearch = async () => {
     setLoading(true)
     try {
-      let query = supabase
+      const query = supabase
         .from(getTableName())
         .select('*')
       

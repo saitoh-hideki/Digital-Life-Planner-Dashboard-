@@ -261,7 +261,7 @@ export default function TopicsAdminPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
-                      onClick={() => toggleToday(topic.id, topic.is_today)}
+                      onClick={() => topic.id && toggleToday(topic.id, topic.is_today || false)}
                       className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${
                         topic.is_today
                           ? 'bg-green-100 text-green-800'
@@ -284,7 +284,7 @@ export default function TopicsAdminPage() {
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(topic.id)}
+                        onClick={() => topic.id && handleDelete(topic.id)}
                         className="text-red-600 hover:text-red-900"
                       >
                         <Trash2 className="w-4 h-4" />

@@ -89,12 +89,12 @@ export default function LocalNewsSettings({ isOpen, onClose }: LocalNewsSettings
     setEditingNews(newsItem)
     setFormData({
       prefecture: newsItem.prefecture,
-      municipality: newsItem.municipality,
+      municipality: newsItem.municipality || '',
       name: newsItem.name,
       summary: newsItem.summary || '',
       body: newsItem.body || '',
       source_url: newsItem.source_url || '',
-      category: newsItem.category
+      category: newsItem.category || '行政DX'
     })
     setIsFormOpen(true)
   }
@@ -211,8 +211,8 @@ export default function LocalNewsSettings({ isOpen, onClose }: LocalNewsSettings
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${CATEGORY_COLORS[newsItem.category]}`}>
-                            {newsItem.category}
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${newsItem.category ? CATEGORY_COLORS[newsItem.category] : 'bg-gray-100 text-gray-800 border-gray-200'}`}>
+                            {newsItem.category || '未分類'}
                           </span>
                           <span className="text-sm text-gray-500 flex items-center gap-1">
                             <MapPin className="w-3 h-3" />

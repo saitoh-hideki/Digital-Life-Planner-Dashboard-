@@ -5,7 +5,7 @@ import { Alert } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { AlertTriangle, AlertCircle, Info, ExternalLink, RefreshCw, Plus, Trash2, Eye, EyeOff } from 'lucide-react'
+import { AlertTriangle, AlertCircle, Info, ExternalLink, RefreshCw, Trash2, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 
 export default function AlertsAdminPage() {
@@ -17,7 +17,7 @@ export default function AlertsAdminPage() {
 
   useEffect(() => {
     fetchAlerts()
-  }, [])
+  }, [filter, sourceFilter])
 
   const fetchAlerts = async () => {
     try {
@@ -186,7 +186,7 @@ export default function AlertsAdminPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">重要度</label>
               <select
                 value={filter}
-                onChange={(e) => setFilter(e.target.value as any)}
+                onChange={(e) => setFilter(e.target.value as 'all' | 'unread' | 'critical' | 'high' | 'info')}
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">すべて</option>
@@ -200,7 +200,7 @@ export default function AlertsAdminPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">発信元</label>
               <select
                 value={sourceFilter}
-                onChange={(e) => setSourceFilter(e.target.value as any)}
+                onChange={(e) => setSourceFilter(e.target.value as 'all' | '警察庁' | '消費者庁')}
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">すべて</option>

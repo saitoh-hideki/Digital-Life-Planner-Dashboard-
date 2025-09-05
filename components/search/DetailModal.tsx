@@ -45,11 +45,11 @@ export default function DetailModal({ result, isOpen, onClose }: DetailModalProp
             )}
             
             {/* 詳細説明 */}
-            {result.description && (
+            {'description' in result && (result as {description: string}).description && (
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-slate-800 mb-3">詳細</h3>
                 <div className="text-slate-700 leading-relaxed whitespace-pre-wrap">
-                  {result.description}
+                  {(result as {description: string}).description}
                 </div>
               </div>
             )}
@@ -113,7 +113,7 @@ export default function DetailModal({ result, isOpen, onClose }: DetailModalProp
           {/* フッター */}
           <div className="flex items-center justify-between p-6 border-t border-slate-200 bg-slate-50">
             <div className="text-sm text-slate-600">
-              最終更新: {result.updated_at ? new Date(result.updated_at).toLocaleDateString('ja-JP') : '不明'}
+              最終更新: {'updated_at' in result && (result as {updated_at: string}).updated_at ? new Date((result as {updated_at: string}).updated_at).toLocaleDateString('ja-JP') : '不明'}
             </div>
             <div className="flex gap-3">
               <button

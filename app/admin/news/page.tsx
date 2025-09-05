@@ -304,7 +304,7 @@ export default function AdminNewsPage() {
       
       // データベース挿入前の最終的なデータクリーニング
       const cleanedRecords = records.map(record => {
-        const cleaned: any = {}
+        const cleaned: Record<string, string | null> = {}
         
         // 必須フィールド
         cleaned.prefecture = record.prefecture || ''

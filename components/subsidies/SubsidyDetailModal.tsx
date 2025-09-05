@@ -80,7 +80,7 @@ export default function SubsidyDetailModal({ subsidy, isOpen, onClose }: Subsidy
     }
   }
 
-  const statusBadge = getStatusBadge(subsidy.status)
+  const statusBadge = getStatusBadge(subsidy.status || '不明')
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">

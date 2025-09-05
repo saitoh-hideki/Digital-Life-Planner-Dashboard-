@@ -171,7 +171,7 @@ export default function ConfettiEffect({ isActive, onComplete, selectedSupporter
       setParticles(prev => 
         prev.map(particle => {
           // パーティクルの動きを更新
-          let newVx = particle.vx
+          const newVx = particle.vx
           let newVy = particle.vy
           
           // 重力効果

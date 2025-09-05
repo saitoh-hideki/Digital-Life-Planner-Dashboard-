@@ -6,6 +6,7 @@ import { Handshake, Plus, Edit, Trash2, Save, X, Calendar, MapPin, Users } from 
 import Link from 'next/link'
 
 interface MeetingFormData {
+  id?: number
   title: string
   description: string
   venue: string
@@ -13,10 +14,12 @@ interface MeetingFormData {
   end_at: string
   participants: string
   status: string
+  created_at?: string
+  updated_at?: string
 }
 
 export default function MeetingsAdminPage() {
-  const [meetings, setMeetings] = useState<any[]>([])
+  const [meetings, setMeetings] = useState<MeetingFormData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState<number | null>(null)
@@ -93,8 +96,8 @@ export default function MeetingsAdminPage() {
     }
   }
 
-  const handleEdit = (item: any) => {
-    setIsEditing(item.id)
+  const handleEdit = (item: MeetingFormData) => {
+    setIsEditing(item.id || null)
     setFormData({
       title: item.title || '',
       description: item.description || '',
@@ -444,7 +447,7 @@ export default function MeetingsAdminPage() {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(item.id)}
+                          onClick={() => item.id && handleDelete(item.id)}
                           className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"
                           title="削除"
                         >

@@ -1,12 +1,13 @@
 'use client'
 
-import { SubsidyNormalized } from '@/lib/types'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { Subsidy } from '@/lib/types'
 import { Calendar, Building2, MapPin, ExternalLink, Users, DollarSign } from 'lucide-react'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
 interface SubsidyCardProps {
-  subsidy: SubsidyNormalized
+  subsidy: Subsidy
   onClick: () => void
 }
 
@@ -63,8 +64,8 @@ export default function SubsidyCard({ subsidy, onClick }: SubsidyCardProps) {
     return '未定'
   }
 
-  const statusBadge = getStatusBadge(subsidy.status)
-  const daysUntilDeadline = subsidy.apply_end ? getDaysUntilDeadline(subsidy.apply_end) : null
+  const statusBadge = getStatusBadge(subsidy.status || '不明')
+  const daysUntilDeadline = 'apply_end' in subsidy && (subsidy as {apply_end: string}).apply_end ? getDaysUntilDeadline((subsidy as {apply_end: string}).apply_end) : null
 
   return (
     <div
@@ -78,12 +79,12 @@ export default function SubsidyCard({ subsidy, onClick }: SubsidyCardProps) {
             {subsidy.name}
           </h3>
           <div className="flex items-center gap-2 text-sm text-slate-500">
-            {subsidy.prefecture && (
+            {'prefecture' in subsidy && (subsidy as {prefecture: string}).prefecture && (
               <div className="flex items-center gap-1">
                 <MapPin className="w-3 h-3" />
-                <span>{subsidy.prefecture}</span>
-                {subsidy.municipality && (
-                  <span className="text-slate-400">・{subsidy.municipality}</span>
+                <span>{(subsidy as {prefecture: string}).prefecture}</span>
+                {'municipality' in subsidy && (subsidy as {municipality: string}).municipality && (
+                  <span className="text-slate-400">・{(subsidy as {municipality: string}).municipality}</span>
                 )}
               </div>
             )}
@@ -104,53 +105,55 @@ export default function SubsidyCard({ subsidy, onClick }: SubsidyCardProps) {
       {/* Metadata */}
       <div className="space-y-3 mb-4">
         {/* Issuer */}
-        {subsidy.issuer && (
+        {'issuer' in subsidy && (subsidy as {issuer: string}).issuer && (
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <Building2 className="w-4 h-4 flex-shrink-0" />
-            <span className="truncate">{subsidy.issuer}</span>
+            <span className="truncate">{(subsidy as {issuer: string}).issuer}</span>
           </div>
         )}
 
         {/* Audience */}
-        {subsidy.audience && (
+        {subsidy.target_audience && (
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <Users className="w-4 h-4 flex-shrink-0" />
-            <span className="truncate">{subsidy.audience}</span>
+            <span className="truncate">{subsidy.target_audience}</span>
           </div>
         )}
 
         {/* Amount */}
-        {(subsidy.amount_min || subsidy.amount_max || subsidy.amount_text) && (
+        {(subsidy.amount || ('amount_min' in subsidy || 'amount_max' in subsidy || 'amount_text' in subsidy)) && (
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <DollarSign className="w-4 h-4 flex-shrink-0" />
             <span className="truncate">
-              {formatAmount(subsidy.amount_min, subsidy.amount_max, subsidy.amount_text)}
+              {subsidy.amount || formatAmount((subsidy as any).amount_min, (subsidy as any).amount_max, (subsidy as any).amount_text)}
             </span>
           </div>
         )}
 
         {/* Application period */}
-        {(subsidy.apply_start || subsidy.apply_end) && (
+        {(subsidy.period || ('apply_start' in subsidy || 'apply_end' in subsidy)) && (
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <Calendar className="w-4 h-4 flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              {subsidy.apply_start && subsidy.apply_end ? (
+              {subsidy.period ? (
+                <span>{subsidy.period}</span>
+              ) : ('apply_start' in subsidy && 'apply_end' in subsidy && (subsidy as any).apply_start && (subsidy as any).apply_end) ? (
                 <span>
-                  {format(new Date(subsidy.apply_start), 'yyyy/MM/dd', { locale: ja })}
+                  {format(new Date((subsidy as any).apply_start), 'yyyy/MM/dd', { locale: ja })}
                   {' ～ '}
                   <span className={daysUntilDeadline !== null && daysUntilDeadline <= 7 && daysUntilDeadline >= 0 ? 'text-orange-600 font-medium' : ''}>
-                    {format(new Date(subsidy.apply_end), 'yyyy/MM/dd', { locale: ja })}
+                    {format(new Date((subsidy as any).apply_end), 'yyyy/MM/dd', { locale: ja })}
                   </span>
                 </span>
-              ) : subsidy.apply_end ? (
+              ) : ('apply_end' in subsidy && (subsidy as any).apply_end) ? (
                 <span>
                   締切: 
                   <span className={daysUntilDeadline !== null && daysUntilDeadline <= 7 && daysUntilDeadline >= 0 ? 'text-orange-600 font-medium ml-1' : 'ml-1'}>
-                    {format(new Date(subsidy.apply_end), 'yyyy/MM/dd', { locale: ja })}
+                    {format(new Date((subsidy as any).apply_end), 'yyyy/MM/dd', { locale: ja })}
                   </span>
                 </span>
-              ) : subsidy.apply_start ? (
-                <span>開始: {format(new Date(subsidy.apply_start), 'yyyy/MM/dd', { locale: ja })}</span>
+              ) : ('apply_start' in subsidy && (subsidy as any).apply_start) ? (
+                <span>開始: {format(new Date((subsidy as any).apply_start), 'yyyy/MM/dd', { locale: ja })}</span>
               ) : null}
             </div>
           </div>

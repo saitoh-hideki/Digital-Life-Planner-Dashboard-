@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Topic, LocalNews } from '@/lib/types'
-import { Archive, Calendar, Globe, Newspaper, Eye, Trash2, RefreshCw } from 'lucide-react'
+import { Archive, Calendar, Globe, Newspaper, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import Link from 'next/link'
@@ -92,9 +91,6 @@ export default function ArchiveAdminPage() {
     }
   }
 
-  const handleRefresh = () => {
-    fetchArchiveData()
-  }
 
   const handleDeleteItem = async (item: ArchiveItem) => {
     if (!confirm('このアイテムを削除しますか？')) return
