@@ -31,6 +31,8 @@ export default function DashboardPage() {
   const [isSubsidyModalOpen, setIsSubsidyModalOpen] = useState(false)
   const [selectedNews, setSelectedNews] = useState<LocalNews | null>(null)
   const [isNewsModalOpen, setIsNewsModalOpen] = useState(false)
+  const [selectedPrefecture, setSelectedPrefecture] = useState<string>('all')
+  const [prefectures, setPrefectures] = useState<string[]>([])
 
   useEffect(() => {
     fetchDashboardData()
@@ -92,12 +94,12 @@ export default function DashboardPage() {
       
       if (appsError) throw appsError
       
-      // 地域ニュース
+      // 地域ニュース（すべて取得してフィルタリング）
       const { data: newsData, error: newsError } = await supabase
         .from('local_news')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(3)
+        .limit(50)
       
       if (newsError) {
         console.error('News error:', newsError)
@@ -115,6 +117,10 @@ export default function DashboardPage() {
       }
       
       setLocalNews(newsData || [])
+      
+      // 都道府県の一覧を抽出
+      const uniquePrefectures = [...new Set(newsData?.map(item => item.prefecture) || [])]
+      setPrefectures(uniquePrefectures.sort())
       
       // アカデミックサークルイベント
       const { data: eventsData, error: eventsError } = await supabase
@@ -221,67 +227,102 @@ export default function DashboardPage() {
               linkHref="/local-news"
               fullWidth
             >
-              {localNews.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {localNews.map((news) => (
-                    <div key={news.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-sm">
-                              {getNewsCategoryIcon(news.category || 'その他')}
-                            </span>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getNewsCategoryColor(news.category || 'その他')}`}>
-                              {news.category || 'その他'}
-                            </span>
-                          </div>
-                          <h4 className="font-semibold text-slate-900 text-sm mb-2 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2">
-                            {news.name}
-                          </h4>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-xs text-slate-500">
-                              <span>{news.prefecture} {news.municipality}</span>
-                              <span>•</span>
-                              <span>
-                                {new Date(news.created_at).toLocaleDateString('ja-JP')}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {/* 詳細ボタン */}
-                              <button
-                                onClick={() => showNewsDetail(news)}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-xs font-medium transition-colors duration-200"
-                              >
-                                <Eye className="w-3 h-3" />
-                                詳細
-                              </button>
-                              {/* URLボタン */}
-                              {news.source_url && (
-                                <a
-                                  href={news.source_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg text-xs font-medium transition-colors duration-200"
-                                >
-                                  <ExternalLink className="w-3 h-3" />
-                                  URL
-                                </a>
-                              )}
+              {/* 地域選択フィルター */}
+              <div className="mb-6">
+                <div className="flex items-center gap-4">
+                  <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                    <MapPin className="w-4 h-4" />
+                    表示地域:
+                  </label>
+                  <select
+                    value={selectedPrefecture}
+                    onChange={(e) => setSelectedPrefecture(e.target.value)}
+                    className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">すべての地域</option>
+                    {prefectures.map((prefecture) => (
+                      <option key={prefecture} value={prefecture}>
+                        {prefecture}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* フィルタリングされたニュース */}
+              {(() => {
+                const filteredNews = selectedPrefecture === 'all' 
+                  ? localNews 
+                  : localNews.filter(news => news.prefecture === selectedPrefecture)
+                
+                return filteredNews.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <div className="flex gap-4 pb-4" style={{ width: 'max-content' }}>
+                      {filteredNews.slice(0, 10).map((news) => (
+                        <div key={news.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group flex-shrink-0 w-80">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-sm">
+                                  {getNewsCategoryIcon(news.category || 'その他')}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getNewsCategoryColor(news.category || 'その他')}`}>
+                                  {news.category || 'その他'}
+                                </span>
+                              </div>
+                              <h4 className="font-semibold text-slate-900 text-sm mb-2 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2">
+                                {news.name}
+                              </h4>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-xs text-slate-500">
+                                  <span>{news.prefecture} {news.municipality}</span>
+                                  <span>•</span>
+                                  <span>
+                                    {new Date(news.created_at).toLocaleDateString('ja-JP')}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {/* 詳細ボタン */}
+                                  <button
+                                    onClick={() => showNewsDetail(news)}
+                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-xs font-medium transition-colors duration-200"
+                                  >
+                                    <Eye className="w-3 h-3" />
+                                    詳細
+                                  </button>
+                                  {/* URLボタン */}
+                                  {news.source_url && (
+                                    <a
+                                      href={news.source_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg text-xs font-medium transition-colors duration-200"
+                                    >
+                                      <ExternalLink className="w-3 h-3" />
+                                      URL
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 mx-auto mb-4 text-slate-300">
-                    <MapPin className="w-full h-full" />
                   </div>
-                  <p className="text-slate-500 text-sm">地域ハイライト情報はまだありません</p>
-                </div>
-              )}
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 mx-auto mb-4 text-slate-300">
+                      <MapPin className="w-full h-full" />
+                    </div>
+                    <p className="text-slate-500 text-sm">
+                      {selectedPrefecture === 'all' 
+                        ? '地域ハイライト情報はまだありません' 
+                        : `${selectedPrefecture}の地域ニュースはまだありません`}
+                    </p>
+                  </div>
+                )
+              })()}
             </DashboardCard>
           </div>
 

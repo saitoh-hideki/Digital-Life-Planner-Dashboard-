@@ -216,8 +216,9 @@ export default function LocalNewsPage() {
       </div>
 
       {/* ニュース一覧 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {filteredNews.map((newsItem) => (
+      <div className="max-h-96 overflow-y-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {filteredNews.map((newsItem) => (
           <div
             key={newsItem.id}
             className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow group"
@@ -295,6 +296,7 @@ export default function LocalNewsPage() {
             </div>
           </div>
         ))}
+        </div>
       </div>
 
       {/* 結果がない場合 */}
